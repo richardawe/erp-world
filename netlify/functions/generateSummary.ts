@@ -10,6 +10,14 @@ interface SummaryRequest {
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+// CORS headers
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
+};
+
 const getPromptForAspect = (content: string, aspect: string) => {
   const basePrompt = `As an executive advisor, analyze this article and provide:
 1. Executive Summary (2-3 bullet points)
@@ -30,21 +38,46 @@ ${content}`;
 };
 
 const handler: Handler = async (event) => {
+  // Handle OPTIONS request for CORS
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: 'Method Not Allowed'
+      headers,
+      body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
   try {
+    if (!event.body) {
+      throw new Error('Request body is missing');
+    }
+
     const { content, aspect = 'general' } = JSON.parse(event.body) as SummaryRequest;
+
+    if (!content) {
+      throw new Error('Content is required');
+    }
 
     if (!OPENROUTER_API_KEY) {
       throw new Error('OpenRouter API key not configured');
     }
 
     const prompt = getPromptForAspect(content, aspect);
+
+    console.log('Making request to OpenRouter with:', {
+      url: OPENROUTER_URL,
+      model: 'anthropic/claude-2',
+      contentLength: content.length,
+      aspect
+    });
 
     const response = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -68,14 +101,18 @@ const handler: Handler = async (event) => {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('OpenRouter API error:', data);
       throw new Error(data.error?.message || 'Failed to generate summary');
+    }
+
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Unexpected API response format:', data);
+      throw new Error('Invalid response format from OpenRouter API');
     }
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         summary: data.choices[0].message.content
       })
@@ -84,7 +121,11 @@ const handler: Handler = async (event) => {
     console.error('Summary generation error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to generate summary' })
+      headers,
+      body: JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Failed to generate summary',
+        details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      })
     };
   }
 };

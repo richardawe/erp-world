@@ -36,6 +36,10 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
     setError(null);
     
     try {
+      if (!content?.trim()) {
+        throw new Error('No content available to analyze');
+      }
+
       const response = await fetch('/.netlify/functions/generateSummary', {
         method: 'POST',
         headers: {
@@ -44,15 +48,24 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
         body: JSON.stringify({ content, aspect }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to generate summary');
+        throw new Error(data.error || 'Failed to generate summary');
       }
 
-      const data = await response.json();
+      if (!data.summary) {
+        throw new Error('No summary received from the API');
+      }
+
       setSummary(parseSummaryContent(data.summary));
     } catch (err) {
-      setError('Failed to generate summary. Please try again.');
       console.error('Summary generation error:', err);
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to generate summary. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
