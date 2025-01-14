@@ -10,4 +10,7 @@
   package = "@netlify/plugin-functions-install-core"
 
 [functions.crawler]
-  schedule = "0 */6 * * *" 
+  schedule = "0 */6 * * *"
+
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "dist/assets/index-*.js" 
