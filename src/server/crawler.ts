@@ -1,8 +1,7 @@
-const Parser = require('rss-parser');
-const { fetch } = require('undici');
-const cheerio = require('cheerio');
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
+import Parser from 'rss-parser';
+import { fetch } from 'undici';
+import * as cheerio from 'cheerio';
+import { createClient } from '@supabase/supabase-js';
 import type { ERPVendor, Category } from '../types';
 import { isAIRelated } from '../utils/ai-detection';
 
@@ -35,15 +34,12 @@ interface Article {
   is_ai_related: boolean;  // Changed from isAIRelated to is_ai_related to match DB column
 }
 
-// Load environment variables from .env file
-dotenv.config();
-
 // Initialize Supabase client with proper environment variables
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL ?? '';
+const supabaseKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables');
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
