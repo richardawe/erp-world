@@ -303,6 +303,10 @@ async function crawlRSSFeed(source: Source): Promise<void> {
         // Handle VentureBeat and TechCrunch specific image extraction
         if (source.vendor === 'VentureBeat' || source.vendor === 'TechCrunch') {
           try {
+            if (!item.link) {
+              console.warn('Skipping article without link');
+              continue;
+            }
             const articleResponse = await fetch(item.link, {
               headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -343,6 +347,10 @@ async function crawlRSSFeed(source: Source): Promise<void> {
           
           // Fetch the full article page
           try {
+            if (!item.link) {
+              console.warn('Skipping Microsoft article without link');
+              continue;
+            }
             const articleResponse = await fetch(item.link, {
               headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -472,18 +480,22 @@ async function crawlRSSFeed(source: Source): Promise<void> {
         // Fetch the full article content
         let content = '';
         try {
-          const articleResponse = await fetch(item.link, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.5'
+          if (!item.link) {
+            console.warn('Skipping article content fetch - no link available');
+          } else {
+            const articleResponse = await fetch(item.link, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5'
+              }
+            });
+            
+            if (articleResponse.ok) {
+              const articleHtml = await articleResponse.text();
+              const $ = cheerio.load(articleHtml);
+              content = await extractArticleContent($);
             }
-          });
-          
-          if (articleResponse.ok) {
-            const articleHtml = await articleResponse.text();
-            const $ = cheerio.load(articleHtml);
-            content = await extractArticleContent($);
           }
         } catch (error) {
           console.warn(`Failed to fetch full content for article: ${item.title}`, error);
