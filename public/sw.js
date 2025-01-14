@@ -1,4 +1,5 @@
-const CACHE_NAME = 'erp-world-v1';
+const CACHE_NAME = 'erp-world-v2';
+const STATIC_CACHE_NAME = 'erp-world-static-v2';
 const URLS_TO_CACHE = [
   '/',
   '/index.html'
@@ -8,7 +9,7 @@ const URLS_TO_CACHE = [
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(STATIC_CACHE_NAME)
       .then(cache => {
         // Try to cache each resource, but don't fail if some fail
         return Promise.allSettled(
@@ -33,7 +34,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
+          if (![CACHE_NAME, STATIC_CACHE_NAME].includes(cacheName)) {
             return caches.delete(cacheName);
           }
         })
@@ -42,7 +43,13 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch handler with network-first strategy
+// Helper to check if request is for an image
+const isImageRequest = (request) => {
+  return request.destination === 'image' || 
+         request.url.match(/\.(jpg|jpeg|png|gif|svg|webp)$/i);
+};
+
+// Fetch handler with different strategies based on request type
 self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -56,13 +63,41 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Special handling for images - stale while revalidate
+  if (isImageRequest(event.request)) {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        const fetchPromise = fetch(event.request).then(networkResponse => {
+          if (networkResponse.ok) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        }).catch(() => {
+          // Return cached response if network fails
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return new Response();
+        });
+
+        // Return cached response immediately if available, otherwise wait for network
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Network-first strategy for other requests
   event.respondWith(
     fetch(event.request)
       .then(response => {
         // Cache successful responses
         if (response.ok) {
           const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
+          caches.open(STATIC_CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);
           });
         }
