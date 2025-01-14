@@ -5,12 +5,15 @@
 
 [functions]
   node_bundler = "esbuild"
-
-[[plugins]]
-  package = "@netlify/plugin-functions-install-core"
+  included_files = ["src/server/**"]
+  external_node_modules = ["@supabase/supabase-js"]
 
 [functions.crawler]
   schedule = "0 */6 * * *"
+  included_files = ["src/server/**"]
+
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
 
 [build.environment]
   NODE_VERSION = "18"
