@@ -6,7 +6,7 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["src/server/**"]
-  external_node_modules = ["@supabase/supabase-js"]
+  external_node_modules = ["@supabase/supabase-js", "node-fetch"]
 
 [functions.crawler]
   included_files = ["src/server/**"]
