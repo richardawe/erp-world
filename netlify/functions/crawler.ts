@@ -1,4 +1,4 @@
-import { Handler, schedule } from "@netlify/functions";
+import { Handler } from "@netlify/functions";
 import { main as runCrawler } from "../../src/server/crawler";
 
 // Validate environment variables
@@ -49,5 +49,4 @@ const crawlerHandler: Handler = async (event, context) => {
   }
 };
 
-// Run every 6 hours
-export const handler = schedule("0 */6 * * *", crawlerHandler); 
+export const handler = crawlerHandler; 
