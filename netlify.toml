@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
 
@@ -13,4 +13,26 @@
   schedule = "0 */6 * * *"
 
 [build.environment]
-  SECRETS_SCAN_OMIT_PATHS = "dist/assets/index-*.js" 
+  NODE_VERSION = "18"
+
+# Don't include environment variables here - they should be set in Netlify dashboard
+[dev]
+  command = "npm run dev"
+  framework = "#custom"
+  port = 5173
+  targetPort = 5173
+  publish = "dist" 
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self' https://rqcowtehcygzmqgkvfiq.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;" 

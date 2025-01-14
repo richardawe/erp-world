@@ -13,11 +13,93 @@ import { Brain, Newspaper, Menu, X } from 'lucide-react';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+// Detailed environment variable checking
+if (!supabaseUrl) {
+  console.error('Missing VITE_SUPABASE_URL environment variable');
+  throw new Error('Missing Supabase URL');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseKey) {
+  console.error('Missing VITE_SUPABASE_ANON_KEY environment variable');
+  throw new Error('Missing Supabase anon key');
+}
+
+// Debug logging
+console.log('Supabase Configuration:', {
+  url: supabaseUrl,
+  keyLength: supabaseKey.length,
+  keyIsValid: supabaseKey.startsWith('eyJ'),
+  keyFirstPart: supabaseKey.split('.')[0],
+  timestamp: new Date().toISOString()
+});
+
+// Initialize Supabase client with explicit configuration
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    }
+  },
+  db: {
+    schema: 'public'
+  }
+});
+
+// Test database connection
+(async () => {
+  try {
+    // First test if we can reach Supabase
+    const { error: healthError } = await supabase.from('articles').select('count', { count: 'exact', head: true });
+    
+    if (healthError) {
+      console.error('Supabase connection test failed:', {
+        error: healthError.message,
+        hint: healthError.hint,
+        details: healthError.details,
+        code: healthError.code,
+        url: supabaseUrl
+      });
+
+      // Additional debugging information
+      if (healthError.message.includes('Invalid API key')) {
+        console.error('API key validation failed. Please check:');
+        console.error('1. Key format is correct (should start with "eyJ")');
+        console.error('2. Key is from the correct project');
+        console.error('3. Key has not expired');
+        console.error('4. Key has proper permissions');
+        
+        // Log the first part of the key for debugging (safe to show as it's just the header)
+        const [header] = supabaseKey.split('.');
+        console.error('Key header:', header);
+      }
+      
+      return;
+    }
+
+    // If health check passes, try to fetch some data
+    const { data, error } = await supabase
+      .from('articles')
+      .select('id, title')
+      .limit(1);
+
+    if (error) {
+      console.error('Failed to fetch data:', error);
+    } else {
+      console.log('Successfully connected to Supabase and fetched data:', {
+        dataReceived: !!data,
+        recordCount: data?.length || 0
+      });
+    }
+  } catch (error) {
+    console.error('Unexpected error during Supabase initialization:', error);
+  }
+})();
 
 type Tab = 'news' | 'ai';
 

@@ -41,16 +41,32 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful');
-            })
-            .catch(err => {
-              console.log('ServiceWorker registration failed: ', err);
+      // Only register service worker in production and if supported
+      if (
+        'serviceWorker' in navigator && 
+        window.location.hostname !== 'localhost' && 
+        window.location.hostname !== '127.0.0.1'
+      ) {
+        // Delay registration until after the page has loaded
+        window.addEventListener('load', async () => {
+          try {
+            // Unregister any existing service workers first
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+              await registration.unregister();
+            }
+            
+            // Register the new service worker
+            const registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/'
             });
+            console.log('ServiceWorker registration successful:', registration);
+          } catch (err) {
+            console.warn('ServiceWorker registration failed:', err);
+          }
         });
+      } else {
+        console.log('ServiceWorker not registered - development environment or not supported');
       }
     </script>
   </head>
