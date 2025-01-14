@@ -13,8 +13,10 @@
     "crawl": "npm run build:crawler && node ./dist/server/crawler.js"
   },
   "dependencies": {
+    "@ant-design/icons": "^5.5.2",
     "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.39.7",
+    "antd": "^5.23.1",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.4.7",
