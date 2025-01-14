@@ -1,6 +1,7 @@
 import { Modal } from './Modal';
 import type { Article } from '../types';
 import { getVendorColor } from '../utils/vendor';
+import { AISummary } from './AISummary';
 
 interface ArticleModalProps {
   article: Article;
@@ -38,6 +39,9 @@ export function ArticleModal({ article, isOpen, onClose }: ArticleModalProps) {
             <time dateTime={article.published_at}>{formattedDate}</time>
           </div>
         </div>
+
+        {/* AI Summary */}
+        <AISummary content={article.content || article.summary} />
 
         {/* Article Content */}
         <div className="prose prose-lg max-w-none">
