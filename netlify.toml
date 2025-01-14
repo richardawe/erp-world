@@ -9,6 +9,9 @@
   external_node_modules = ["@supabase/supabase-js"]
 
 [functions.crawler]
+  included_files = ["src/server/**"]
+
+[functions.scheduledCrawler]
   schedule = "0 */6 * * *"
   included_files = ["src/server/**"]
 
