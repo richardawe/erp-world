@@ -1,7 +1,7 @@
 import { Handler, schedule } from "@netlify/functions";
 import { main as runCrawler } from "../../src/server/crawler";
 
-const handler: Handler = async (event, context) => {
+const crawlerHandler: Handler = async (event, context) => {
   try {
     console.log("Starting crawler...");
     await runCrawler();
@@ -21,4 +21,4 @@ const handler: Handler = async (event, context) => {
 };
 
 // Run every 6 hours
-export const handler = schedule("0 */6 * * *", handler); 
+export const handler = schedule("0 */6 * * *", crawlerHandler); 
