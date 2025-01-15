@@ -88,7 +88,7 @@ const handler: Handler = async (event) => {
     });
 
     const completion = await openai.chat.completions.create({
-      model: 'meta-llama/llama-3.1-405b-instruct:free',
+      model: 'meta-llama/llama-3.1-70b-instruct:free',
       messages: [{
         role: 'user',
         content: prompt
