@@ -17,28 +17,28 @@ interface SummaryContent {
 }
 
 const parseSummaryContent = (content: string): SummaryContent => {
-  // Split content into sections
-  const sections = content.split(/\d\.\s+/g).filter(Boolean);
+  // Split into main sections
+  const sections = content.split(/\n\n/);
   
-  // Helper function to clean bullet points and headers
-  const cleanBulletPoints = (text: string): string[] => {
-    return text
+  // Helper function to extract bullet points
+  const extractBulletPoints = (section: string): string[] => {
+    return section
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line)
-      .map(line => line
-        .replace(/^[•*]\s*/, '')  // Remove bullet points
-        .replace(/^\*\*.*?\*\*:\s*/, '')  // Remove bold headers
-        .replace(/^-\s*/, '')  // Remove dashes
-        .trim()
-      )
-      .filter(line => line);
+      .filter(line => line.startsWith('•'))
+      .map(line => line.substring(1).trim())
+      .filter(line => line && !line.includes('Executive Summary:') && !line.includes('Key Takeaways:') && !line.includes('Strategic Implications:'));
   };
 
+  // Find sections by their headers
+  const executiveSummarySection = sections.find(s => s.includes('Executive Summary:')) || '';
+  const keyTakeawaysSection = sections.find(s => s.includes('Key Takeaways:')) || '';
+  const strategicImplicationsSection = sections.find(s => s.includes('Strategic Implications:')) || '';
+
   return {
-    executiveSummary: cleanBulletPoints(sections[0] || ''),
-    keyTakeaways: cleanBulletPoints(sections[1] || ''),
-    strategicImplications: cleanBulletPoints(sections[2] || '')
+    executiveSummary: extractBulletPoints(executiveSummarySection),
+    keyTakeaways: extractBulletPoints(keyTakeawaysSection),
+    strategicImplications: extractBulletPoints(strategicImplicationsSection)
   };
 };
 

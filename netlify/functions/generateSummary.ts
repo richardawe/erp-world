@@ -31,10 +31,21 @@ const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
   const urls = content.match(urlPattern) || [];
   const urlList = urls.length ? '\n\nRelevant Links:\n' + urls.join('\n') : '';
 
-  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis:
-1. Executive Summary (2-3 bullet points highlighting the most important insights)
-2. Key Takeaways (2-3 points focusing on actionable insights and business implications)
-3. Strategic Implications (1-2 points on long-term impact and strategic considerations)
+  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis. Format your response exactly as follows:
+
+Executive Summary:
+• First key insight
+• Second key insight
+• Third key insight (if applicable)
+
+Key Takeaways:
+• First takeaway
+• Second takeaway
+• Third takeaway (if applicable)
+
+Strategic Implications:
+• First implication
+• Second implication (if applicable)
 
 Article content:
 ${content}${urlList}`;
