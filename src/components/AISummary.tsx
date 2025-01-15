@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Select, Spin, Typography, Space, Divider, Tooltip } from 'antd';
+import { Button, Card, Select, Spin, Typography, Space, Divider, Tooltip, message } from 'antd';
 import { BulbOutlined, BarChartOutlined, RocketOutlined, TwitterOutlined, LinkedinOutlined, MailOutlined, LinkOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -61,7 +61,8 @@ const ShareButtons: React.FC<{ summary: SummaryContent, articleUrl?: string }> =
   const shareText = formatSummaryForShare(summary);
   
   const handleTwitterShare = () => {
-    const text = `Check out this AI-generated summary:\n\n${summary.executiveSummary[0]}\n\nRead more:`;
+    // Twitter has a character limit, so we'll include just the first point and a link
+    const text = `AI-Generated Summary:\n\n${summary.executiveSummary[0]}\n\nRead full summary and article at:`;
     const url = articleUrl || window.location.href;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
   };
@@ -77,8 +78,14 @@ const ShareButtons: React.FC<{ summary: SummaryContent, articleUrl?: string }> =
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(articleUrl || window.location.href);
+  const handleCopyLink = async () => {
+    try {
+      const textToCopy = `${shareText}\n\nOriginal article: ${articleUrl || window.location.href}`;
+      await navigator.clipboard.writeText(textToCopy);
+      message.success('Summary copied to clipboard!');
+    } catch (err) {
+      message.error('Failed to copy summary to clipboard');
+    }
   };
 
   return (
