@@ -31,7 +31,7 @@ const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
   const urls = content.match(urlPattern) || [];
   const urlList = urls.length ? '\n\nRelevant Links:\n' + urls.join('\n') : '';
 
-  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis. Format your response exactly as follows:
+  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis. Format your response EXACTLY as follows, maintaining the exact headers and bullet point format:
 
 Executive Summary:
 • First key insight
@@ -46,6 +46,8 @@ Key Takeaways:
 Strategic Implications:
 • First implication
 • Second implication (if applicable)
+
+Use ONLY the bullet point format shown above with the "•" symbol. Do not use any other formatting or symbols. Keep each bullet point concise and focused.
 
 Article content:
 ${content}${urlList}`;

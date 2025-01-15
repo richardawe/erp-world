@@ -17,24 +17,28 @@ interface SummaryContent {
 }
 
 const parseSummaryContent = (content: string): SummaryContent => {
-  // Split into main sections
-  const sections = content.split(/\n\n/);
+  // Split content into sections based on headers
+  const sections = content.split(/(?=Executive Summary:|Key Takeaways:|Strategic Implications:)/);
   
-  // Helper function to extract bullet points
+  // Helper function to extract bullet points from a section
   const extractBulletPoints = (section: string): string[] => {
-    return section
+    // Remove the header
+    const contentWithoutHeader = section.replace(/^(Executive Summary:|Key Takeaways:|Strategic Implications:)/, '').trim();
+    
+    return contentWithoutHeader
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.startsWith('•'))
       .map(line => line.substring(1).trim())
-      .filter(line => line && !line.includes('Executive Summary:') && !line.includes('Key Takeaways:') && !line.includes('Strategic Implications:'));
+      .filter(Boolean);
   };
 
-  // Find sections by their headers
+  // Find and process each section
   const executiveSummarySection = sections.find(s => s.includes('Executive Summary:')) || '';
   const keyTakeawaysSection = sections.find(s => s.includes('Key Takeaways:')) || '';
   const strategicImplicationsSection = sections.find(s => s.includes('Strategic Implications:')) || '';
 
+  // Extract bullet points for each section
   return {
     executiveSummary: extractBulletPoints(executiveSummarySection),
     keyTakeaways: extractBulletPoints(keyTakeawaysSection),
