@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Card, Select, Spin, Typography, Space, Divider } from 'antd';
-import { BulbOutlined, BarChartOutlined, RocketOutlined } from '@ant-design/icons';
+import { Button, Card, Select, Spin, Typography, Space, Divider, Tooltip } from 'antd';
+import { BulbOutlined, BarChartOutlined, RocketOutlined, TwitterOutlined, LinkedinOutlined, MailOutlined, LinkOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -46,17 +46,77 @@ const parseSummaryContent = (content: string): SummaryContent => {
   };
 };
 
+const formatSummaryForShare = (summary: SummaryContent): string => {
+  const formatSection = (title: string, points: string[]) => 
+    `${title}:\n${points.map(point => `• ${point}`).join('\n')}`;
+
+  return [
+    formatSection('Executive Summary', summary.executiveSummary),
+    formatSection('Key Takeaways', summary.keyTakeaways),
+    formatSection('Strategic Implications', summary.strategicImplications)
+  ].join('\n\n');
+};
+
+const ShareButtons: React.FC<{ summary: SummaryContent, articleUrl?: string }> = ({ summary, articleUrl }) => {
+  const shareText = formatSummaryForShare(summary);
+  
+  const handleTwitterShare = () => {
+    const text = `Check out this AI-generated summary:\n\n${summary.executiveSummary[0]}\n\nRead more:`;
+    const url = articleUrl || window.location.href;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const handleLinkedInShare = () => {
+    const url = articleUrl || window.location.href;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const handleEmailShare = () => {
+    const subject = 'AI-Generated Article Summary';
+    const body = `${shareText}\n\nOriginal article: ${articleUrl || window.location.href}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(articleUrl || window.location.href);
+  };
+
+  return (
+    <Space>
+      <Tooltip title="Share on Twitter">
+        <Button icon={<TwitterOutlined />} onClick={handleTwitterShare} />
+      </Tooltip>
+      <Tooltip title="Share on LinkedIn">
+        <Button icon={<LinkedinOutlined />} onClick={handleLinkedInShare} />
+      </Tooltip>
+      <Tooltip title="Share via Email">
+        <Button icon={<MailOutlined />} onClick={handleEmailShare} />
+      </Tooltip>
+      <Tooltip title="Copy Link">
+        <Button icon={<LinkOutlined />} onClick={handleCopyLink} />
+      </Tooltip>
+    </Space>
+  );
+};
+
 export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [aspect, setAspect] = useState<string>('general');
   const [summary, setSummary] = useState<SummaryContent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [articleUrl, setArticleUrl] = useState<string>();
 
   const generateSummary = async () => {
     setLoading(true);
     setError(null);
     
     try {
+      // Extract URL from content
+      const urlMatch = content.match(/(https?:\/\/[^\s]+)/);
+      if (urlMatch) {
+        setArticleUrl(urlMatch[0]);
+      }
+
       if (!content?.trim()) {
         throw new Error('No content available to analyze');
       }
@@ -141,6 +201,16 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
         <Text type="danger">{error}</Text>
       ) : summary ? (
         <>
+          {articleUrl && (
+            <>
+              <Paragraph>
+                <Text strong>Original Article: </Text>
+                <a href={articleUrl} target="_blank" rel="noopener noreferrer">{articleUrl}</a>
+              </Paragraph>
+              <Divider />
+            </>
+          )}
+
           <Title level={4}>
             <Space>
               <BarChartOutlined />
@@ -186,6 +256,12 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
               </div>
             ))}
           </Paragraph>
+
+          <Divider />
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Text strong>Share this summary:</Text>
+            <ShareButtons summary={summary} articleUrl={articleUrl} />
+          </Space>
         </>
       ) : (
         <Text type="secondary">
