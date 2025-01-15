@@ -1,6 +1,6 @@
 import { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
 interface SummaryRequest {
   content: string;
@@ -88,7 +88,7 @@ const handler: Handler = async (event) => {
       aspect
     });
 
-    const completion = await openai.chat.completions.create({
+    const response = await axios.post(`${OPENROUTER_BASE_URL}/chat/completions`, {
       model: 'meta-llama/llama-3.1-405b-instruct:free',
       messages: [{
         role: 'user',
@@ -96,7 +96,16 @@ const handler: Handler = async (event) => {
       }],
       temperature: 0.7,
       max_tokens: 1000
+    }, {
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/richardawe/erp-world',
+        'X-Title': 'ERP World'
+      }
     });
+
+    const completion = response.data;
 
     console.log('API response:', completion);
 
