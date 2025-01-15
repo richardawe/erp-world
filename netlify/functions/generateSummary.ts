@@ -25,21 +25,26 @@ const getHeaders = (requestOrigin?: string) => ({
   'Content-Type': 'application/json'
 });
 
-const aspectPrompts: Record<ArticleAspect, string> = {
-  market_trends: '\nFocus specifically on market trends, industry shifts, and market opportunities.',
-  competitive_moves: '\nFocus specifically on competitive landscape, strategic moves by competitors, and market positioning.',
-  technology_impacts: '\nFocus specifically on technological innovations, digital transformation impacts, and tech adoption implications.',
-  general: ''
-};
-
 const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
-  const basePrompt = `As an executive advisor, analyze this article and provide:
-1. Executive Summary (2-3 bullet points)
-2. Key Takeaways (2-3 points)
-3. Strategic Implications (1-2 points)
+  // Extract URLs from the content using a regex pattern
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  const urls = content.match(urlPattern) || [];
+  const urlList = urls.length ? '\n\nRelevant Links:\n' + urls.join('\n') : '';
+
+  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis:
+1. Executive Summary (2-3 bullet points highlighting the most important insights)
+2. Key Takeaways (2-3 points focusing on actionable insights and business implications)
+3. Strategic Implications (1-2 points on long-term impact and strategic considerations)
 
 Article content:
-${content}`;
+${content}${urlList}`;
+
+  const aspectPrompts = {
+    market_trends: '\nFocus specifically on market trends, industry shifts, and market opportunities. Include relevant market size, growth rates, and competitive dynamics if mentioned.',
+    competitive_moves: '\nFocus specifically on competitive landscape, strategic moves by competitors, and market positioning. Include analysis of competitive advantages and potential threats.',
+    technology_impacts: '\nFocus specifically on technological innovations, digital transformation impacts, and tech adoption implications. Include analysis of technical feasibility and implementation considerations.',
+    general: '\nProvide a balanced analysis covering business, market, and technology aspects.'
+  };
 
   return basePrompt + aspectPrompts[aspect];
 };
