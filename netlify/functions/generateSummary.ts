@@ -1,22 +1,38 @@
 import { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
 
+// Define all possible aspects to ensure type safety
+type ArticleAspect = 'market_trends' | 'competitive_moves' | 'technology_impacts' | 'general';
+
 interface SummaryRequest {
   content: string;
-  aspect?: 'market_trends' | 'competitive_moves' | 'technology_impacts' | 'general';
+  aspect?: ArticleAspect;
 }
+
+// Move to environment variable for flexibility
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',');
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
+// Define headers based on the origin
+const getHeaders = (requestOrigin?: string) => ({
+  'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(requestOrigin || '') 
+    ? requestOrigin 
+    : ALLOWED_ORIGINS[0],
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json'
+});
+
+const aspectPrompts: Record<ArticleAspect, string> = {
+  market_trends: '\nFocus specifically on market trends, industry shifts, and market opportunities.',
+  competitive_moves: '\nFocus specifically on competitive landscape, strategic moves by competitors, and market positioning.',
+  technology_impacts: '\nFocus specifically on technological innovations, digital transformation impacts, and tech adoption implications.',
+  general: ''
 };
 
-const getPromptForAspect = (content: string, aspect: string) => {
+const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
   const basePrompt = `As an executive advisor, analyze this article and provide:
 1. Executive Summary (2-3 bullet points)
 2. Key Takeaways (2-3 points)
@@ -25,16 +41,10 @@ const getPromptForAspect = (content: string, aspect: string) => {
 Article content:
 ${content}`;
 
-  const aspectPrompts = {
-    market_trends: '\nFocus specifically on market trends, industry shifts, and market opportunities.',
-    competitive_moves: '\nFocus specifically on competitive landscape, strategic moves by competitors, and market positioning.',
-    technology_impacts: '\nFocus specifically on technological innovations, digital transformation impacts, and tech adoption implications.',
-    general: ''
-  };
-
-  return basePrompt + (aspectPrompts[aspect] || '');
+  return basePrompt + aspectPrompts[aspect];
 };
 
+// Create OpenAI client only once
 const openai = new OpenAI({
   baseURL: OPENROUTER_BASE_URL,
   apiKey: OPENROUTER_API_KEY,
@@ -44,14 +54,20 @@ const openai = new OpenAI({
   }
 });
 
+// Constants for API configuration
+const API_CONFIG = {
+  model: 'meta-llama/llama-3.1-70b-instruct:free',
+  temperature: 0.7,
+  max_tokens: 1000,
+} as const;
+
 const handler: Handler = async (event) => {
+  // Get headers based on the request origin
+  const headers = getHeaders(event.headers.origin);
+
   // Handle OPTIONS request for CORS
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: ''
-    };
+    return { statusCode: 200, headers, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
@@ -67,56 +83,56 @@ const handler: Handler = async (event) => {
       throw new Error('Request body is missing');
     }
 
-    const { content, aspect = 'general' } = JSON.parse(event.body) as SummaryRequest;
-
-    if (!content) {
-      throw new Error('Content is required');
-    }
-
     if (!OPENROUTER_API_KEY) {
-      console.error('OpenRouter API key is missing');
       throw new Error('OpenRouter API key not configured');
     }
 
-    const prompt = getPromptForAspect(content, aspect);
+    const { content, aspect = 'general' } = JSON.parse(event.body) as SummaryRequest;
 
-    console.log('Making request to OpenRouter with:', {
-      url: `${OPENROUTER_BASE_URL}/chat/completions`,
-      model: 'meta-llama/llama-3.1-70b-instruct:free',
+    if (!content?.trim()) {
+      throw new Error('Content is required and cannot be empty');
+    }
+
+    // Validate aspect
+    if (aspect && !aspectPrompts.hasOwnProperty(aspect)) {
+      throw new Error(`Invalid aspect: ${aspect}`);
+    }
+
+    const prompt = getPromptForAspect(content, aspect as ArticleAspect);
+
+    console.log('Making request to OpenRouter:', {
+      model: API_CONFIG.model,
       contentLength: content.length,
       aspect
     });
 
     const completion = await openai.chat.completions.create({
-      model: 'meta-llama/llama-3.1-70b-instruct:free',
+      ...API_CONFIG,
       messages: [{
         role: 'user',
         content: prompt
-      }],
-      temperature: 0.7,
-      max_tokens: 1000
+      }]
     });
-
-    console.log('API response:', completion);
 
     const summary = completion.choices?.[0]?.message?.content;
 
     if (!summary) {
-      console.error('Unexpected API response format:', completion);
       throw new Error('Invalid response format from OpenRouter API');
     }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        summary
-      })
+      body: JSON.stringify({ summary })
     };
+
   } catch (error) {
     console.error('Summary generation error:', error);
+    
+    const statusCode = error instanceof Error && error.message.includes('API key') ? 503 : 500;
+    
     return {
-      statusCode: 500,
+      statusCode,
       headers,
       body: JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Failed to generate summary',
@@ -126,4 +142,4 @@ const handler: Handler = async (event) => {
   }
 };
 
-export { handler }; 
+export { handler };
