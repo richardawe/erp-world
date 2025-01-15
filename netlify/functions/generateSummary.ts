@@ -62,15 +62,19 @@ const API_CONFIG = {
 } as const;
 
 const handler: Handler = async (event) => {
-  // Get headers based on the request origin
+  console.log('generateSummary function invoked.');
+
   const headers = getHeaders(event.headers.origin);
+  console.log('CORS headers set:', headers);
 
   // Handle OPTIONS request for CORS
   if (event.httpMethod === 'OPTIONS') {
+    console.log('Handling OPTIONS request.');
     return { statusCode: 200, headers, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
+    console.warn(`Method not allowed: ${event.httpMethod}`);
     return {
       statusCode: 405,
       headers,
@@ -79,63 +83,77 @@ const handler: Handler = async (event) => {
   }
 
   try {
+    console.log('Processing POST request.');
+
     if (!event.body) {
+      console.error('Request body is missing.');
       throw new Error('Request body is missing');
     }
 
+    const { content, aspect = 'general' } = JSON.parse(event.body) as SummaryRequest;
+    console.log('Parsed request:', { contentLength: content?.length, aspect });
+
+    if (!content) {
+      throw new Error('Content is required');
+    }
+
     if (!OPENROUTER_API_KEY) {
+      console.error('OpenRouter API key is missing');
       throw new Error('OpenRouter API key not configured');
     }
 
-    const { content, aspect = 'general' } = JSON.parse(event.body) as SummaryRequest;
-
-    if (!content?.trim()) {
-      throw new Error('Content is required and cannot be empty');
-    }
-
-    // Validate aspect
-    if (aspect && !aspectPrompts.hasOwnProperty(aspect)) {
-      throw new Error(`Invalid aspect: ${aspect}`);
-    }
-
     const prompt = getPromptForAspect(content, aspect as ArticleAspect);
+    console.log('Generated prompt:', { promptLength: prompt.length });
 
-    console.log('Making request to OpenRouter:', {
+    console.log('Making request to OpenRouter with:', {
+      baseURL: OPENROUTER_BASE_URL,
       model: API_CONFIG.model,
       contentLength: content.length,
       aspect
     });
 
-    const completion = await openai.chat.completions.create({
-      ...API_CONFIG,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    });
+    try {
+      const completion = await openai.chat.completions.create({
+        ...API_CONFIG,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
 
-    const summary = completion.choices?.[0]?.message?.content;
+      console.log('OpenRouter API response received:', {
+        status: 'success',
+        hasChoices: !!completion.choices?.length,
+        firstChoice: completion.choices?.[0]
+      });
 
-    if (!summary) {
-      throw new Error('Invalid response format from OpenRouter API');
+      const summary = completion.choices?.[0]?.message?.content;
+
+      if (!summary) {
+        console.error('Unexpected API response format:', completion);
+        throw new Error('Invalid response format from OpenRouter API');
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ summary })
+      };
+    } catch (apiError) {
+      console.error('OpenRouter API error:', apiError);
+      throw new Error(`OpenRouter API error: ${apiError instanceof Error ? apiError.message : 'Unknown error'}`);
     }
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ summary })
-    };
-
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Summary generation error:', error);
-    
-    const statusCode = error instanceof Error && error.message.includes('API key') ? 503 : 500;
-    
+
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate summary';
+    const statusCode = errorMessage.includes('API key') ? 503 : 500;
+
     return {
       statusCode,
       headers,
       body: JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Failed to generate summary',
+        error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? String(error) : undefined
       })
     };

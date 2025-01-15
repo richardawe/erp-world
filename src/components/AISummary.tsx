@@ -48,7 +48,13 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
         body: JSON.stringify({ content, aspect }),
       });
 
-      const data = await response.json();
+      // Check if response is not empty
+      const text = await response.text();
+      if (!text) {
+        throw new Error('Received empty response from the server');
+      }
+
+      const data = JSON.parse(text);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate summary');
@@ -59,7 +65,7 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, onClose }) => {
       }
 
       setSummary(parseSummaryContent(data.summary));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Summary generation error:', err);
       setError(
         err instanceof Error 
