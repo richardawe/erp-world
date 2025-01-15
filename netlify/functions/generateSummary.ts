@@ -1,6 +1,5 @@
 import { Handler } from '@netlify/functions';
 import fetch from 'node-fetch';
-import type { Response } from 'node-fetch';
 
 interface SummaryRequest {
   content: string;
@@ -98,7 +97,7 @@ const handler: Handler = async (event) => {
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
 
     if (!response.ok) {
       console.error('OpenRouter API error:', data);
