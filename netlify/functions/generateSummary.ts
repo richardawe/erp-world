@@ -83,7 +83,7 @@ const handler: Handler = async (event) => {
 
     console.log('Making request to OpenRouter with:', {
       url: `${OPENROUTER_BASE_URL}/chat/completions`,
-      model: 'meta-llama/llama-3.1-405b-instruct:free',
+      model: 'meta-llama/llama-3.1-70b-instruct:free',
       contentLength: content.length,
       aspect
     });
