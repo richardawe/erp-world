@@ -31,7 +31,56 @@ const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
   const urls = content.match(urlPattern) || [];
   const urlList = urls.length ? '\n\nRelevant Links:\n' + urls.join('\n') : '';
 
-  const basePrompt = `As an executive advisor, analyze this article and provide a comprehensive analysis. Format your response EXACTLY as follows, maintaining the exact headers and bullet point format:
+  const aspectPrompts = {
+    market_trends: `As a market analyst, analyze this article focusing on market trends and industry dynamics. Format your response EXACTLY as follows:
+
+Executive Summary:
+• Key market trends and industry shifts identified
+• Market size and growth potential highlighted
+• Notable market opportunities or challenges
+
+Key Takeaways:
+• Current market dynamics and their implications
+• Emerging trends and their potential impact
+• Market demand and consumer behavior insights
+
+Strategic Implications:
+• Long-term market outlook and growth trajectory
+• Recommended market positioning strategies`,
+
+    competitive_moves: `As a competitive strategy advisor, analyze this article focusing on competitive landscape. Format your response EXACTLY as follows:
+
+Executive Summary:
+• Key competitive moves and strategic shifts
+• Changes in competitive positioning
+• Notable competitive advantages or threats
+
+Key Takeaways:
+• Competitor strategies and their implications
+• Market share and positioning insights
+• Competitive advantages and disadvantages
+
+Strategic Implications:
+• Long-term competitive impact
+• Recommended competitive response strategies`,
+
+    technology_impacts: `As a technology strategist, analyze this article focusing on technological implications. Format your response EXACTLY as follows:
+
+Executive Summary:
+• Key technological innovations or breakthroughs
+• Technical implementation considerations
+• Potential disruption to existing systems
+
+Key Takeaways:
+• Technical feasibility and requirements
+• Integration challenges and solutions
+• Technology adoption implications
+
+Strategic Implications:
+• Long-term technology impact
+• Recommended implementation approach`,
+
+    general: `As an executive advisor, analyze this article and provide a comprehensive analysis. Format your response EXACTLY as follows:
 
 Executive Summary:
 • First key insight
@@ -45,21 +94,17 @@ Key Takeaways:
 
 Strategic Implications:
 • First implication
-• Second implication (if applicable)
+• Second implication (if applicable)`
+  };
+
+  const basePrompt = `${aspectPrompts[aspect]}
 
 Use ONLY the bullet point format shown above with the "•" symbol. Do not use any other formatting or symbols. Keep each bullet point concise and focused.
 
 Article content:
 ${content}${urlList}`;
 
-  const aspectPrompts = {
-    market_trends: '\nFocus specifically on market trends, industry shifts, and market opportunities. Include relevant market size, growth rates, and competitive dynamics if mentioned.',
-    competitive_moves: '\nFocus specifically on competitive landscape, strategic moves by competitors, and market positioning. Include analysis of competitive advantages and potential threats.',
-    technology_impacts: '\nFocus specifically on technological innovations, digital transformation impacts, and tech adoption implications. Include analysis of technical feasibility and implementation considerations.',
-    general: '\nProvide a balanced analysis covering business, market, and technology aspects.'
-  };
-
-  return basePrompt + aspectPrompts[aspect];
+  return basePrompt;
 };
 
 // Create OpenAI client only once
