@@ -17,11 +17,28 @@ interface SummaryContent {
 }
 
 const parseSummaryContent = (content: string): SummaryContent => {
-  const sections = content.split('\n\n');
+  // Split content into sections
+  const sections = content.split(/\d\.\s+/g).filter(Boolean);
+  
+  // Helper function to clean bullet points and headers
+  const cleanBulletPoints = (text: string): string[] => {
+    return text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line)
+      .map(line => line
+        .replace(/^[•*]\s*/, '')  // Remove bullet points
+        .replace(/^\*\*.*?\*\*:\s*/, '')  // Remove bold headers
+        .replace(/^-\s*/, '')  // Remove dashes
+        .trim()
+      )
+      .filter(line => line);
+  };
+
   return {
-    executiveSummary: sections[0]?.split('\n').filter(line => line.trim()) || [],
-    keyTakeaways: sections[1]?.split('\n').filter(line => line.trim()) || [],
-    strategicImplications: sections[2]?.split('\n').filter(line => line.trim()) || []
+    executiveSummary: cleanBulletPoints(sections[0] || ''),
+    keyTakeaways: cleanBulletPoints(sections[1] || ''),
+    strategicImplications: cleanBulletPoints(sections[2] || '')
   };
 };
 
