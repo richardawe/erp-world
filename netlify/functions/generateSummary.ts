@@ -74,6 +74,7 @@ const handler: Handler = async (event) => {
     }
 
     if (!OPENROUTER_API_KEY) {
+      console.error('OpenRouter API key is missing');
       throw new Error('OpenRouter API key not configured');
     }
 
@@ -95,6 +96,8 @@ const handler: Handler = async (event) => {
       temperature: 0.7,
       max_tokens: 1000
     });
+
+    console.log('API response:', completion);
 
     const summary = completion.choices?.[0]?.message?.content;
 
