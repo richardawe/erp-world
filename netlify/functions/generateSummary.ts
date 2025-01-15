@@ -1,5 +1,6 @@
 import { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
+import fetch from 'node-fetch';
 
 interface SummaryRequest {
   content: string;
