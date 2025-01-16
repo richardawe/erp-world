@@ -2,7 +2,7 @@ import { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
 
 // Define all possible aspects to ensure type safety
-type ArticleAspect = 'market_trends' | 'competitive_moves' | 'technology_impacts' | 'general';
+type ArticleAspect = 'market_trends' | 'competitive_moves' | 'technology_impacts' | 'general' | 'ai_in_erp';
 
 interface SummaryRequest {
   content: string;
@@ -24,6 +24,28 @@ const getHeaders = (requestOrigin?: string) => ({
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json'
 });
+
+const getAIInERPPrompt = (articles: string[]): string => {
+  return `As an AI and ERP expert, analyze these articles and provide a comprehensive daily summary of AI developments in ERP systems:
+
+Executive Summary:
+• Overview of key AI developments in ERP today
+• Major trends and patterns observed
+• Potential impact on ERP industry
+
+Key Innovations:
+• Notable AI features and capabilities
+• Technical breakthroughs
+• Integration approaches
+
+Strategic Implications:
+• Business impact assessment
+• Adoption considerations
+• Future outlook
+
+Articles content:
+${articles.join('\n\n---\n\n')}`;
+};
 
 const getPromptForAspect = (content: string, aspect: ArticleAspect): string => {
   // Extract URLs from the content using a regex pattern
@@ -94,7 +116,9 @@ Key Takeaways:
 
 Strategic Implications:
 • First implication
-• Second implication (if applicable)`
+• Second implication (if applicable)`,
+
+    ai_in_erp: getAIInERPPrompt([content])
   };
 
   const basePrompt = `${aspectPrompts[aspect]}

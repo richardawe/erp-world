@@ -4,6 +4,7 @@ import { NewsCard } from './components/NewsCard';
 import { SearchBar } from './components/SearchBar';
 import { VendorInfo } from './components/VendorInfo';
 import { AITab } from './components/AITab';
+import { AIERPSummary } from './components/AIERPSummary';
 import type { Article, NewsSource } from './types';
 import { getVendorColor } from './utils/vendor';
 import { createClient } from '@supabase/supabase-js';
@@ -153,6 +154,7 @@ export default function App() {
         background: 'linear-gradient(to bottom right, #2563eb, #4f46e5, #7c3aed)'
       }}
     >
+      <AIERPSummary />
       {/* Header */}
       <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div className="max-w-[2000px] mx-auto px-6 py-4 flex justify-between items-center">
