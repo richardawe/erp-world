@@ -167,7 +167,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
           <Space>
             <RobotOutlined className="text-gray-200" />
             <span className="text-gray-100 font-medium">Daily AI in ERP Summary</span>
-            <Text className="text-gray-300 text-sm">
+            <Text className="text-black text-sm">
               {date}
             </Text>
           </Space>
@@ -194,7 +194,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               <BulbOutlined />
               Executive Summary
             </Title>
-            <Paragraph className="text-gray-300">
+            <Paragraph className="text-black">
               {summary.executiveSummary.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -208,7 +208,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               <RobotOutlined />
               Key Innovations
             </Title>
-            <Paragraph className="text-gray-300">
+            <Paragraph className="text-black">
               {summary.keyInnovations.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -222,7 +222,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               <RocketOutlined />
               Strategic Implications
             </Title>
-            <Paragraph className="text-gray-300">
+            <Paragraph className="text-black">
               {summary.strategicImplications.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
