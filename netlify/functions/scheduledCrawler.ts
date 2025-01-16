@@ -161,10 +161,10 @@ const scheduledCrawlerHandler: Handler = async (event, context) => {
   }
 };
 
-// Run every 6 hours, but also allow direct invocation for testing
-export const handler = async (event: any, context: any) => {
-  // If it's a scheduled event or a direct POST request, run the crawler
-  if (event.httpMethod === 'POST' || event?.type === 'scheduled') {
+// First, create the handler for both scheduled and direct invocation
+const handler: Handler = async (event, context) => {
+  // If it's a direct POST request, run the crawler immediately
+  if (event.httpMethod === 'POST') {
     return scheduledCrawlerHandler(event, context);
   }
 
@@ -173,4 +173,10 @@ export const handler = async (event: any, context: any) => {
     statusCode: 405,
     body: JSON.stringify({ error: 'Method not allowed' })
   };
-}; 
+};
+
+// Then, create the scheduled version using the schedule helper
+const scheduledHandler = schedule("0 */6 * * *", scheduledCrawlerHandler);
+
+// Export both handlers
+export { handler, scheduledHandler }; 
