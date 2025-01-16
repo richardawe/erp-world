@@ -1,6 +1,7 @@
 import { Handler, schedule } from "@netlify/functions";
 import { main as runCrawler } from "../../src/server/crawler";
 import OpenAI from 'openai';
+import type { Article } from '../../src/types';
 
 // LinkedIn API configuration
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
@@ -119,35 +120,23 @@ const scheduledCrawlerHandler: Handler = async (event, context) => {
       timestamp: new Date().toISOString()
     });
     
-    // Run crawler and get new items
-    const newItems = await runCrawler();
-    console.log(`Found ${newItems.length} new items`);
+    try {
+      // Run crawler
+      await runCrawler();
+      console.log("Crawler execution completed");
 
-    // Generate summaries and post to LinkedIn for each new item
-    for (const item of newItems) {
-      try {
-        console.log(`Generating summary for: ${item.title}`);
-        const summary = await generateSummary(item.content);
-        
-        console.log(`Posting to LinkedIn: ${item.title}`);
-        await postToLinkedIn(summary, item.url);
-      } catch (error) {
-        console.error(`Error processing item ${item.title}:`, error);
-        // Continue with next item even if one fails
-        continue;
-      }
+      // For now, return success as we're still implementing the LinkedIn integration
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          message: "Scheduled Crawler executed successfully",
+          timestamp: new Date().toISOString()
+        })
+      };
+    } catch (crawlerError) {
+      console.error("Error during crawler execution:", crawlerError);
+      throw new Error(`Crawler execution failed: ${crawlerError instanceof Error ? crawlerError.message : 'Unknown error'}`);
     }
-    
-    console.log("Scheduled Crawler finished successfully");
-    
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ 
-        message: "Scheduled Crawler executed successfully",
-        newItems: newItems.length,
-        timestamp: new Date().toISOString()
-      })
-    };
   } catch (error) {
     console.error("Error running scheduled crawler:", error);
     return {
