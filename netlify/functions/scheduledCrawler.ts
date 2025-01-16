@@ -121,15 +121,36 @@ const scheduledCrawlerHandler: Handler = async (event, context) => {
     });
     
     try {
-      // Run crawler
-      await runCrawler();
-      console.log("Crawler execution completed");
+      // Run crawler and get new items
+      const newItems = await runCrawler();
+      console.log(`Found ${newItems?.length || 0} new items`);
 
-      // For now, return success as we're still implementing the LinkedIn integration
+      // Process each new item
+      if (newItems && newItems.length > 0) {
+        for (const item of newItems) {
+          try {
+            // Generate summary
+            console.log(`Generating summary for: ${item.title}`);
+            const summary = await generateSummary(item.content);
+
+            // Post to LinkedIn
+            if (summary) {
+              console.log(`Posting to LinkedIn: ${item.title}`);
+              await postToLinkedIn(summary, item.url);
+            }
+          } catch (itemError) {
+            console.error(`Error processing item ${item.title}:`, itemError);
+            // Continue with next item even if one fails
+            continue;
+          }
+        }
+      }
+
       return {
         statusCode: 200,
         body: JSON.stringify({ 
           message: "Scheduled Crawler executed successfully",
+          newItems: newItems?.length || 0,
           timestamp: new Date().toISOString()
         })
       };
