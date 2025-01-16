@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Divider, Spin, Alert } from 'antd';
-import { RobotOutlined, BulbOutlined, RocketOutlined } from '@ant-design/icons';
+import { Card, Typography, Space, Divider, Spin, Alert, Collapse } from 'antd';
+import { RobotOutlined, BulbOutlined, RocketOutlined, CaretRightOutlined } from '@ant-design/icons';
 import { createClient } from '@supabase/supabase-js';
 
 const { Title, Text, Paragraph } = Typography;
+const { Panel } = Collapse;
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -47,10 +48,17 @@ const parseSummaryContent = (content: string): SummaryContent => {
   };
 };
 
+interface ArticleWithSummary {
+  title: string;
+  url: string;
+  summary: string;
+}
+
 export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().toLocaleDateString() }) => {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<SummaryContent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [articles, setArticles] = useState<ArticleWithSummary[]>([]);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -58,11 +66,10 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
       setError(null);
       
       try {
-        // First, fetch AI-related articles from today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const { data: articles, error: fetchError } = await supabase
+        const { data: fetchedArticles, error: fetchError } = await supabase
           .from('articles')
           .select('*')
           .eq('is_ai_related', true)
@@ -73,16 +80,21 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
           throw new Error('Failed to fetch AI-related articles');
         }
 
-        if (!articles || articles.length === 0) {
+        if (!fetchedArticles || fetchedArticles.length === 0) {
           throw new Error('No AI-related articles found today');
         }
 
-        // Combine all articles content
-        const combinedContent = articles
+        // Store articles for linking
+        setArticles(fetchedArticles.map(article => ({
+          title: article.title,
+          url: article.url,
+          summary: article.summary
+        })));
+
+        const combinedContent = fetchedArticles
           .map(article => `${article.title}\n\n${article.content || article.summary}`)
           .join('\n\n---\n\n');
 
-        // Generate summary
         const response = await fetch('/.netlify/functions/generateSummary', {
           method: 'POST',
           headers: {
@@ -115,71 +127,111 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
     fetchSummary();
   }, []);
 
+  const findArticleUrl = (point: string): string | null => {
+    return articles.find(article => 
+      point.toLowerCase().includes(article.title.toLowerCase()) ||
+      article.summary.toLowerCase().includes(point.toLowerCase())
+    )?.url || null;
+  };
+
+  const renderPoint = (point: string) => {
+    const url = findArticleUrl(point);
+    return (
+      <div style={{ marginBottom: 8 }}>
+        • {url ? (
+          <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600"
+          >
+            {point}
+          </a>
+        ) : point}
+      </div>
+    );
+  };
+
   return (
-    <Card
-      title={
-        <Space>
-          <RobotOutlined style={{ color: '#1890ff' }} />
-          <span>Daily AI in ERP Summary</span>
-          <Text type="secondary" style={{ fontSize: '14px' }}>
-            {date}
-          </Text>
-        </Space>
-      }
-      style={{ marginBottom: 24 }}
+    <Collapse
+      className="mb-6 bg-white/10 backdrop-blur-md border border-white/20"
+      expandIcon={({ isActive }) => (
+        <CaretRightOutlined 
+          rotate={isActive ? 90 : 0} 
+          className="text-white/80"
+        />
+      )}
     >
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <Spin size="large" />
-          <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-            Analyzing AI developments in ERP...
-          </Text>
-        </div>
-      ) : error ? (
-        <Alert type="error" message={error} />
-      ) : summary ? (
-        <>
-          <Title level={4}>
-            <Space>
+      <Panel 
+        header={
+          <Space>
+            <RobotOutlined className="text-white/80" />
+            <span className="text-white font-medium">Daily AI in ERP Summary</span>
+            <Text className="text-white/60 text-sm">
+              {date}
+            </Text>
+          </Space>
+        }
+        key="1"
+        className="site-collapse-custom-panel"
+      >
+        {loading ? (
+          <div className="text-center py-8">
+            <Spin size="large" />
+            <Text className="block mt-4 text-white/80">
+              Analyzing AI developments in ERP...
+            </Text>
+          </div>
+        ) : error ? (
+          <Alert 
+            type="error" 
+            message={error} 
+            className="bg-white/10 border-white/20 text-white"
+          />
+        ) : summary ? (
+          <div className="text-white">
+            <Title level={4} className="flex items-center gap-2 text-white">
               <BulbOutlined />
               Executive Summary
-            </Space>
-          </Title>
-          <Paragraph>
-            {summary.executiveSummary.map((point, index) => (
-              <div key={index} style={{ marginBottom: 8 }}>• {point}</div>
-            ))}
-          </Paragraph>
+            </Title>
+            <Paragraph className="text-white/90">
+              {summary.executiveSummary.map((point, index) => (
+                <React.Fragment key={index}>
+                  {renderPoint(point)}
+                </React.Fragment>
+              ))}
+            </Paragraph>
 
-          <Divider />
+            <Divider className="border-white/20" />
 
-          <Title level={4}>
-            <Space>
+            <Title level={4} className="flex items-center gap-2 text-white">
               <RobotOutlined />
               Key Innovations
-            </Space>
-          </Title>
-          <Paragraph>
-            {summary.keyInnovations.map((point, index) => (
-              <div key={index} style={{ marginBottom: 8 }}>• {point}</div>
-            ))}
-          </Paragraph>
+            </Title>
+            <Paragraph className="text-white/90">
+              {summary.keyInnovations.map((point, index) => (
+                <React.Fragment key={index}>
+                  {renderPoint(point)}
+                </React.Fragment>
+              ))}
+            </Paragraph>
 
-          <Divider />
+            <Divider className="border-white/20" />
 
-          <Title level={4}>
-            <Space>
+            <Title level={4} className="flex items-center gap-2 text-white">
               <RocketOutlined />
               Strategic Implications
-            </Space>
-          </Title>
-          <Paragraph>
-            {summary.strategicImplications.map((point, index) => (
-              <div key={index} style={{ marginBottom: 8 }}>• {point}</div>
-            ))}
-          </Paragraph>
-        </>
-      ) : null}
-    </Card>
+            </Title>
+            <Paragraph className="text-white/90">
+              {summary.strategicImplications.map((point, index) => (
+                <React.Fragment key={index}>
+                  {renderPoint(point)}
+                </React.Fragment>
+              ))}
+            </Paragraph>
+          </div>
+        ) : null}
+      </Panel>
+    </Collapse>
   );
 }; 
