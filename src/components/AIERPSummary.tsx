@@ -139,14 +139,26 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
     return (
       <div style={{ marginBottom: 8 }}>
         • {url ? (
-          <a 
-            href={url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600"
-          >
-            {point}
-          </a>
+          <span>
+            <a 
+              href={url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline decoration-dotted"
+            >
+              {point}
+            </a>
+            <span className="ml-2 text-xs text-gray-500">
+              [<a 
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-500 hover:text-blue-600"
+              >
+                source
+              </a>]
+            </span>
+          </span>
         ) : point}
       </div>
     );
