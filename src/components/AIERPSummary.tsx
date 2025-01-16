@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Space, Divider, Spin, Alert } from 'antd';
 import { RobotOutlined, BulbOutlined, RocketOutlined } from '@ant-design/icons';
+import { createClient } from '@supabase/supabase-js';
 
 const { Title, Text, Paragraph } = Typography;
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface AIERPSummaryProps {
   date?: string;
@@ -52,16 +58,44 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
       setError(null);
       
       try {
+        // First, fetch AI-related articles from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const { data: articles, error: fetchError } = await supabase
+          .from('articles')
+          .select('*')
+          .eq('is_ai_related', true)
+          .gte('published_at', today.toISOString())
+          .order('published_at', { ascending: false });
+
+        if (fetchError) {
+          throw new Error('Failed to fetch AI-related articles');
+        }
+
+        if (!articles || articles.length === 0) {
+          throw new Error('No AI-related articles found today');
+        }
+
+        // Combine all articles content
+        const combinedContent = articles
+          .map(article => `${article.title}\n\n${article.content || article.summary}`)
+          .join('\n\n---\n\n');
+
+        // Generate summary
         const response = await fetch('/.netlify/functions/generateSummary', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ aspect: 'ai_in_erp' }),
+          body: JSON.stringify({ 
+            content: combinedContent,
+            aspect: 'ai_in_erp' 
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch AI in ERP summary');
+          throw new Error('Failed to generate summary');
         }
 
         const data = await response.json();
@@ -71,6 +105,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
 
         setSummary(parseSummaryContent(data.summary));
       } catch (err) {
+        console.error('Error generating summary:', err);
         setError(err instanceof Error ? err.message : 'Failed to generate summary');
       } finally {
         setLoading(false);
