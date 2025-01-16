@@ -154,20 +154,20 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
 
   return (
     <Collapse
-      className="mb-6 bg-white/10 backdrop-blur-md border border-white/20"
+      className="mb-6 bg-gray-800/90 backdrop-blur-md border border-gray-700"
       expandIcon={({ isActive }) => (
         <CaretRightOutlined 
           rotate={isActive ? 90 : 0} 
-          className="text-white/80"
+          className="text-gray-200"
         />
       )}
     >
       <Panel 
         header={
           <Space>
-            <RobotOutlined className="text-white/80" />
-            <span className="text-white font-medium">Daily AI in ERP Summary</span>
-            <Text className="text-white/60 text-sm">
+            <RobotOutlined className="text-gray-200" />
+            <span className="text-gray-100 font-medium">Daily AI in ERP Summary</span>
+            <Text className="text-gray-300 text-sm">
               {date}
             </Text>
           </Space>
@@ -178,7 +178,7 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
         {loading ? (
           <div className="text-center py-8">
             <Spin size="large" />
-            <Text className="block mt-4 text-white/80">
+            <Text className="block mt-4 text-gray-200">
               Analyzing AI developments in ERP...
             </Text>
           </div>
@@ -186,15 +186,15 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
           <Alert 
             type="error" 
             message={error} 
-            className="bg-white/10 border-white/20 text-white"
+            className="bg-gray-800/80 border-red-500/50 text-gray-200"
           />
         ) : summary ? (
-          <div className="text-white">
-            <Title level={4} className="flex items-center gap-2 text-white">
+          <div className="text-gray-200">
+            <Title level={4} className="flex items-center gap-2 text-gray-100">
               <BulbOutlined />
               Executive Summary
             </Title>
-            <Paragraph className="text-white/90">
+            <Paragraph className="text-gray-300">
               {summary.executiveSummary.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -202,13 +202,13 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               ))}
             </Paragraph>
 
-            <Divider className="border-white/20" />
+            <Divider className="border-gray-600" />
 
-            <Title level={4} className="flex items-center gap-2 text-white">
+            <Title level={4} className="flex items-center gap-2 text-gray-100">
               <RobotOutlined />
               Key Innovations
             </Title>
-            <Paragraph className="text-white/90">
+            <Paragraph className="text-gray-300">
               {summary.keyInnovations.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -216,13 +216,13 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               ))}
             </Paragraph>
 
-            <Divider className="border-white/20" />
+            <Divider className="border-gray-600" />
 
-            <Title level={4} className="flex items-center gap-2 text-white">
+            <Title level={4} className="flex items-center gap-2 text-gray-100">
               <RocketOutlined />
               Strategic Implications
             </Title>
-            <Paragraph className="text-white/90">
+            <Paragraph className="text-gray-300">
               {summary.strategicImplications.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
