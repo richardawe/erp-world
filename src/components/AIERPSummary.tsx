@@ -166,22 +166,26 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
 
   return (
     <Collapse
-      className="mb-6 bg-gray-800/90 backdrop-blur-md border border-gray-700"
+      className="mb-6 bg-gradient-to-r from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl"
       expandIcon={({ isActive }) => (
         <CaretRightOutlined 
           rotate={isActive ? 90 : 0} 
-          className="text-gray-200"
+          className="text-blue-400 text-lg"
         />
       )}
     >
       <Panel 
         header={
-          <Space>
-            <RobotOutlined className="text-gray-200" />
-            <span className="text-gray-100 font-medium">Daily AI in ERP Summary</span>
-            <Text className="text-black text-sm">
-              {date}
-            </Text>
+          <Space size="middle" className="py-2">
+            <RobotOutlined className="text-blue-400 text-2xl" />
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold text-white tracking-wide">
+                Daily AI in ERP Summary
+              </span>
+              <Text className="text-blue-300 text-sm font-medium">
+                {date}
+              </Text>
+            </div>
           </Space>
         }
         key="1"
@@ -201,12 +205,12 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
             className="bg-gray-800/80 border-red-500/50 text-gray-200"
           />
         ) : summary ? (
-          <div className="text-gray-200">
-            <Title level={4} className="flex items-center gap-2 text-gray-100">
-              <BulbOutlined />
-              Executive Summary
+          <div className="text-gray-200 p-4">
+            <Title level={4} className="flex items-center gap-3 text-white mb-6">
+              <BulbOutlined className="text-yellow-400" />
+              <span className="font-semibold tracking-wide">Executive Summary</span>
             </Title>
-            <Paragraph className="text-black">
+            <Paragraph className="text-black text-base leading-relaxed">
               {summary.executiveSummary.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -214,13 +218,13 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               ))}
             </Paragraph>
 
-            <Divider className="border-gray-600" />
+            <Divider className="border-gray-600 my-8" />
 
-            <Title level={4} className="flex items-center gap-2 text-gray-100">
-              <RobotOutlined />
-              Key Innovations
+            <Title level={4} className="flex items-center gap-3 text-white mb-6">
+              <RobotOutlined className="text-blue-400" />
+              <span className="font-semibold tracking-wide">Key Innovations</span>
             </Title>
-            <Paragraph className="text-black">
+            <Paragraph className="text-black text-base leading-relaxed">
               {summary.keyInnovations.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
@@ -228,13 +232,13 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
               ))}
             </Paragraph>
 
-            <Divider className="border-gray-600" />
+            <Divider className="border-gray-600 my-8" />
 
-            <Title level={4} className="flex items-center gap-2 text-gray-100">
-              <RocketOutlined />
-              Strategic Implications
+            <Title level={4} className="flex items-center gap-3 text-white mb-6">
+              <RocketOutlined className="text-purple-400" />
+              <span className="font-semibold tracking-wide">Strategic Implications</span>
             </Title>
-            <Paragraph className="text-black">
+            <Paragraph className="text-black text-base leading-relaxed">
               {summary.strategicImplications.map((point, index) => (
                 <React.Fragment key={index}>
                   {renderPoint(point)}
