@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://erp-world.netlify.app/sitemap.xml 
+Sitemap: https://erpworld.netlify.app/sitemap.xml 
