@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="50" viewBox="0 0 200 50" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- Forterro Logo -->
+  <g fill="#00529B">
+    <!-- Letter F -->
+    <path d="M10,10 h25 v6 h-18 v10 h16 v6 h-16 v18 h-7 z"/>
+    <!-- Letter O -->
+    <path d="M45,10 q8,0 13,5 t5,13 t-5,13 t-13,5 t-13,-5 t-5,-13 t5,-13 t13,-5 m0,6 q-5,0 -8,3 t-3,9 t3,9 t8,3 t8,-3 t3,-9 t-3,-9 t-8,-3"/>
+    <!-- Letter R -->
+    <path d="M70,10 h20 q7,0 11,4 t4,9 q0,5 -4,9 t-11,4 h-13 v14 h-7 z m7,20 h13 q4,0 6,-2 t2,-5 t-2,-5 t-6,-2 h-13 z"/>
+    <!-- Letter T -->
+    <path d="M110,10 h25 v6 h-9 v34 h-7 v-34 h-9 z"/>
+    <!-- Letter E -->
+    <path d="M140,10 h25 v6 h-18 v10 h16 v6 h-16 v12 h18 v6 h-25 z"/>
+    <!-- Letter R -->
+    <path d="M170,10 h20 q7,0 11,4 t4,9 q0,5 -4,9 t-11,4 h-13 v14 h-7 z m7,20 h13 q4,0 6,-2 t2,-5 t-2,-5 t-6,-2 h-13 z"/>
+    <!-- Letter O -->
+    <path d="M45,10 q8,0 13,5 t5,13 t-5,13 t-13,5 t-13,-5 t-5,-13 t5,-13 t13,-5 m0,6 q-5,0 -8,3 t-3,9 t3,9 t8,3 t8,-3 t3,-9 t-3,-9 t-8,-3"/>
+  </g>
+</svg> 

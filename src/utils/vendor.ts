@@ -2,53 +2,31 @@ import { Building2, Database, MonitorPlay, Clock, BarChart2, Package, Newspaper,
 import type { NewsSource } from '../types';
 
 export function getVendorLogo(vendor: NewsSource): string {
-  switch (vendor) {
-    // ERP Vendors
-    case 'SAP':
-      return 'https://www.sap.com/dam/application/shared/logos/sap-logo-svg.svg';
-    case 'Oracle':
-      return 'https://www.oracle.com/asset/web/favicons/favicon-192.png';
-    case 'Microsoft':
-      return 'https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE1Mu3b';
-    case 'Workday':
-      return 'https://workday.com/content/dam/web/en-us/images/workday-header-logo.svg';
-    case 'Unit4':
-      return 'https://www.unit4.com/assets/logos/unit4-logo.svg';
-    case 'Infor':
-      return 'https://www.infor.com/static-resources/images/infor-logo.svg';
-    // Tech News Sources
-    case 'TechCrunch':
-      return 'https://techcrunch.com/wp-content/uploads/2015/02/cropped-cropped-favicon-gradient.png';
-    case 'VentureBeat':
-      return 'https://venturebeat.com/wp-content/themes/vb-news/img/favicon.ico';
-    default:
-      return '';
-  }
+  const logos: Record<NewsSource, string> = {
+    SAP: '/vendor-logos/sap.svg',
+    Oracle: '/vendor-logos/oracle.svg',
+    Microsoft: '/vendor-logos/microsoft.svg',
+    Workday: '/vendor-logos/workday.svg',
+    Unit4: '/vendor-logos/unit4.svg',
+    Infor: '/vendor-logos/infor.svg',
+    Forterro: '/vendor-logos/forterro.svg'
+  };
+
+  return logos[vendor];
 }
 
 export function getVendorColor(vendor: NewsSource): string {
-  switch (vendor) {
-    // ERP Vendors
-    case 'SAP':
-      return '#003366';
-    case 'Oracle':
-      return '#C74634';
-    case 'Microsoft':
-      return '#00A4EF';
-    case 'Workday':
-      return '#0875E1';
-    case 'Unit4':
-      return '#1A1F71';
-    case 'Infor':
-      return '#C8102E';
-    // Tech News Sources
-    case 'TechCrunch':
-      return '#00D084';
-    case 'VentureBeat':
-      return '#1C5FAD';
-    default:
-      return '#6B7280';
-  }
+  const colors: Record<NewsSource, string> = {
+    SAP: '#0077B3',
+    Oracle: '#C74634',
+    Microsoft: '#00A4EF',
+    Workday: '#0066A1',
+    Unit4: '#1A1A1A',
+    Infor: '#C8102E',
+    Forterro: '#00529B'
+  };
+
+  return colors[vendor] || '#2563eb';
 }
 
 export function getVendorIcon(vendor: NewsSource) {
@@ -74,4 +52,18 @@ export function getVendorIcon(vendor: NewsSource) {
     default:
       return Building2;
   }
+}
+
+export function getVendorWebsite(vendor: NewsSource): string {
+  const websites: Record<NewsSource, string> = {
+    SAP: 'https://www.sap.com',
+    Oracle: 'https://www.oracle.com',
+    Microsoft: 'https://dynamics.microsoft.com',
+    Workday: 'https://www.workday.com',
+    Unit4: 'https://www.unit4.com',
+    Infor: 'https://www.infor.com',
+    Forterro: 'https://www.forterro.com'
+  };
+
+  return websites[vendor];
 } 

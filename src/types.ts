@@ -1,6 +1,13 @@
 export type ERPVendor = 'SAP' | 'Oracle' | 'Microsoft' | 'Workday' | 'Unit4' | 'Infor';
 
-export type NewsSource = ERPVendor | 'TechCrunch' | 'VentureBeat';
+export type NewsSource = 
+  | 'SAP'
+  | 'Oracle'
+  | 'Microsoft'
+  | 'Workday'
+  | 'Unit4'
+  | 'Infor'
+  | 'Forterro';
 
 export type Category = 'Product Launch' | 'Security Update' | 'Market Trend' | 'Partnership' | 'Acquisition' | 'AI Innovation' | 'General';
 
