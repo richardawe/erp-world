@@ -186,7 +186,8 @@ export default function App() {
           className={`
             fixed lg:static inset-y-0 left-0 z-30
             w-64 min-h-[calc(100vh-73px)] bg-white/10 backdrop-blur-md border-r border-white/20 
-            p-6 space-y-8 transition-transform duration-300 lg:translate-x-0
+            p-6 space-y-8 transition-all duration-300 lg:translate-x-0
+            lg:hover:translate-x-0 lg:w-16 lg:hover:w-64 group
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           `}
           style={{ top: '73px' }}
@@ -204,7 +205,9 @@ export default function App() {
                 }`}
               >
                 <Newspaper className="w-4 h-4" />
-                News Feed
+                <span className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                  News Feed
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab('ai')}
@@ -215,13 +218,15 @@ export default function App() {
                 }`}
               >
                 <Brain className="w-4 h-4" />
-                AI in ERP
+                <span className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                  AI in ERP
+                </span>
               </button>
             </div>
 
             {/* Filters (only show in news tab) */}
             {activeTab === 'news' && (
-              <div className="space-y-6">
+              <div className="space-y-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                 <VendorFilter
                   selectedVendor={filters.vendor}
                   onVendorSelect={(vendor) => setFilters(prev => ({ ...prev, vendor }))}

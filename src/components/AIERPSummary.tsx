@@ -66,8 +66,11 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
       setError(null);
       
       try {
+        // Get today's date at midnight
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        
+        console.log('Fetching AI-related articles for date:', today.toISOString());
         
         const { data: fetchedArticles, error: fetchError } = await supabase
           .from('articles')
@@ -77,23 +80,32 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
           .order('published_at', { ascending: false });
 
         if (fetchError) {
-          throw new Error('Failed to fetch AI-related articles');
+          console.error('Supabase fetch error:', fetchError);
+          throw new Error(`Failed to fetch AI-related articles: ${fetchError.message}`);
         }
 
+        console.log('Fetched articles:', fetchedArticles?.length || 0);
+
         if (!fetchedArticles || fetchedArticles.length === 0) {
-          throw new Error('No AI-related articles found today');
+          throw new Error('No AI-related articles found for today');
         }
 
         // Store articles for linking
-        setArticles(fetchedArticles.map(article => ({
+        const processedArticles = fetchedArticles.map(article => ({
           title: article.title,
           url: article.url,
-          summary: article.summary
-        })));
+          summary: article.summary || ''
+        }));
+        
+        setArticles(processedArticles);
+        console.log('Processed articles for linking:', processedArticles.length);
 
+        // Combine article content for summary generation
         const combinedContent = fetchedArticles
-          .map(article => `${article.title}\n\n${article.content || article.summary}`)
+          .map(article => `${article.title}\n\n${article.content || article.summary || ''}`)
           .join('\n\n---\n\n');
+
+        console.log('Generating summary for combined content length:', combinedContent.length);
 
         const response = await fetch('/.netlify/functions/generateSummary', {
           method: 'POST',
@@ -107,18 +119,33 @@ export const AIERPSummary: React.FC<AIERPSummaryProps> = ({ date = new Date().to
         });
 
         if (!response.ok) {
-          throw new Error('Failed to generate summary');
+          const errorText = await response.text();
+          console.error('Summary generation response error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText
+          });
+          throw new Error(`Failed to generate summary: ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('Received summary response:', { hasSummary: !!data.summary });
+
         if (!data.summary) {
-          throw new Error('No summary received');
+          throw new Error('No summary content received from the API');
         }
 
-        setSummary(parseSummaryContent(data.summary));
+        const parsedSummary = parseSummaryContent(data.summary);
+        console.log('Parsed summary sections:', {
+          executiveSummary: parsedSummary.executiveSummary.length,
+          keyInnovations: parsedSummary.keyInnovations.length,
+          strategicImplications: parsedSummary.strategicImplications.length
+        });
+
+        setSummary(parsedSummary);
       } catch (err) {
-        console.error('Error generating summary:', err);
-        setError(err instanceof Error ? err.message : 'Failed to generate summary');
+        console.error('Error in fetchSummary:', err);
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred while generating the summary');
       } finally {
         setLoading(false);
       }
