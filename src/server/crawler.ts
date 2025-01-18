@@ -1171,6 +1171,84 @@ async function crawlHTMLPage(source: Source): Promise<void> {
   }
 }
 
+async function crawlForterro(): Promise<Article[]> {
+  try {
+    console.log('Crawling Forterro news...');
+    const baseUrl = 'https://www.forterro.com/en/news';
+    const response = await fetch(baseUrl);
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const articles: Article[] = [];
+
+    // Find all news articles on the page
+    $('.news-item').each((_, element) => {
+      const title = $(element).find('h2').text().trim();
+      const summary = $(element).find('.news-summary').text().trim();
+      const url = $(element).find('a').attr('href');
+      const dateText = $(element).find('.news-date').text().trim();
+      const published_at = new Date(dateText);
+
+      // Determine if the article is AI-related based on content
+      const fullText = `${title} ${summary}`.toLowerCase();
+      const isAIRelated = fullText.includes('ai') || 
+                         fullText.includes('artificial intelligence') || 
+                         fullText.includes('machine learning') ||
+                         fullText.includes('automation');
+
+      // Determine category based on content
+      let categories: Category[] = ['General'];
+      if (fullText.includes('acquisition') || fullText.includes('acquires')) {
+        categories = ['Acquisition'];
+      } else if (fullText.includes('partnership') || fullText.includes('partners')) {
+        categories = ['Partnership'];
+      } else if (fullText.includes('launch') || fullText.includes('releases')) {
+        categories = ['Product Launch'];
+      }
+
+      if (title && url) {
+        articles.push({
+          title,
+          summary,
+          content: summary, // For now, using summary as content
+          source: 'Forterro News',
+          url: url.startsWith('http') ? url : `https://www.forterro.com${url}`,
+          image_url: null,
+          published_at,
+          vendor: 'Forterro',
+          categories,
+          is_ai_related: isAIRelated
+        });
+      }
+    });
+
+    console.log(`Found ${articles.length} Forterro articles`);
+    return articles;
+  } catch (error) {
+    console.error('Error crawling Forterro:', error);
+    return [];
+  }
+}
+
+// Add Forterro to the main crawl function
+export async function crawlAllVendors(): Promise<Article[]> {
+  try {
+    const results = await Promise.all([
+      crawlSAP(),
+      crawlOracle(),
+      crawlMicrosoft(),
+      crawlWorkday(),
+      crawlUnit4(),
+      crawlInfor(),
+      crawlForterro()
+    ]);
+
+    return results.flat();
+  } catch (error) {
+    console.error('Error in crawlAllVendors:', error);
+    return [];
+  }
+}
+
 // Main crawler function
 async function main() {
   console.log('Starting crawler...');
