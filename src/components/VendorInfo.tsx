@@ -36,7 +36,7 @@ const newsSourceInfo: Record<NewsSource, VendorInfo> = {
   // ERP Vendors
   SAP: {
     name: 'SAP',
-    description: 'Global leader in enterprise application software and software-related services.',
+    description: 'Global leader in enterprise software, providing ERP, CRM, and business intelligence solutions.',
     website: 'https://www.sap.com',
     products: [
       { name: 'SAP S/4HANA', url: 'https://www.sap.com/products/erp/s4hana.html' },
@@ -144,6 +144,24 @@ const newsSourceInfo: Record<NewsSource, VendorInfo> = {
     website: 'https://venturebeat.com',
     topics: ['AI', 'Enterprise', 'Cloud', 'GamesBeat'],
     coverage: ['AI/ML News', 'Enterprise Tech', 'Cloud Computing', 'Gaming Industry']
+  },
+  Forterro: {
+    name: 'Forterro',
+    description: 'A European provider of ERP software solutions for the industrial manufacturing sector.',
+    website: 'https://www.forterro.com',
+    products: [
+      { name: 'Jeeves ERP', url: 'https://www.forterro.com/products/jeeves' },
+      { name: 'MONITOR G5', url: 'https://www.forterro.com/products/monitor' },
+      { name: 'Logikal', url: 'https://www.forterro.com/products/logikal' }
+    ],
+    modules: [
+      'Manufacturing', 'Distribution', 'Supply Chain', 'Finance', 
+      'Project Management', 'Window & Door Design', 'Quality Management'
+    ],
+    customers: [
+      'BM Group', 'Orgadata AG', 'Industrial Manufacturing Companies', 
+      'Window & Door Manufacturers', 'Metal Fabricators'
+    ]
   }
 };
 
