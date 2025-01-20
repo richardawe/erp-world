@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Card, Input, Button, Select, message, Table, Space, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Card, Input, Button, Select, message, Table, Space, Tag, Modal } from 'antd';
+import { PlusOutlined, DeleteOutlined, LogoutOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginForm } from './LoginForm';
 
 const { Option } = Select;
+const { confirm } = Modal;
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -28,20 +29,30 @@ export const AdminPanel: React.FC = () => {
   const [type, setType] = useState<'rss' | 'html'>('rss');
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
+  const [tableLoading, setTableLoading] = useState(false);
 
   // If not authenticated, show login form
   if (!user) {
     return <LoginForm />;
   }
 
-  // Fetch sources on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       fetchSources();
     }
   }, [user]);
 
+  const validateUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const fetchSources = async () => {
+    setTableLoading(true);
     try {
       const { data, error } = await supabase
         .from('sources')
@@ -53,12 +64,27 @@ export const AdminPanel: React.FC = () => {
     } catch (error) {
       message.error('Failed to fetch sources');
       console.error('Error fetching sources:', error);
+    } finally {
+      setTableLoading(false);
     }
   };
 
   const handleSubmit = async () => {
+    // Validate fields
     if (!url || !vendor) {
       message.error('Please fill in all fields');
+      return;
+    }
+
+    if (!validateUrl(url)) {
+      message.error('Please enter a valid URL');
+      return;
+    }
+
+    // Check for duplicate URL
+    const duplicateSource = sources.find(source => source.url === url);
+    if (duplicateSource) {
+      message.error('This URL already exists in the sources');
       return;
     }
 
@@ -68,8 +94,8 @@ export const AdminPanel: React.FC = () => {
         .from('sources')
         .insert([
           {
-            url,
-            vendor,
+            url: url.trim(),
+            vendor: vendor.trim(),
             type,
             active: true
           }
@@ -80,6 +106,7 @@ export const AdminPanel: React.FC = () => {
       message.success('Source added successfully');
       setUrl('');
       setVendor('');
+      setType('rss');
       fetchSources();
     } catch (error) {
       message.error('Failed to add source');
@@ -90,20 +117,30 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('sources')
-        .delete()
-        .eq('id', id);
+    confirm({
+      title: 'Are you sure you want to delete this source?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'This action cannot be undone.',
+      okText: 'Yes',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          const { error } = await supabase
+            .from('sources')
+            .delete()
+            .eq('id', id);
 
-      if (error) throw error;
+          if (error) throw error;
 
-      message.success('Source deleted successfully');
-      fetchSources();
-    } catch (error) {
-      message.error('Failed to delete source');
-      console.error('Error deleting source:', error);
-    }
+          message.success('Source deleted successfully');
+          fetchSources();
+        } catch (error) {
+          message.error('Failed to delete source');
+          console.error('Error deleting source:', error);
+        }
+      },
+    });
   };
 
   const handleToggleActive = async (record: Source) => {
@@ -138,13 +175,14 @@ export const AdminPanel: React.FC = () => {
       title: 'Vendor',
       dataIndex: 'vendor',
       key: 'vendor',
+      sorter: (a: Source, b: Source) => a.vendor.localeCompare(b.vendor),
     },
     {
       title: 'URL',
       dataIndex: 'url',
       key: 'url',
       render: (text: string) => (
-        <a href={text} target="_blank" rel="noopener noreferrer">
+        <a href={text} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-500">
           {text}
         </a>
       ),
@@ -153,6 +191,11 @@ export const AdminPanel: React.FC = () => {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
+      filters: [
+        { text: 'RSS', value: 'rss' },
+        { text: 'HTML', value: 'html' },
+      ],
+      onFilter: (value: string | number | boolean, record: Source) => record.type === value,
       render: (text: string) => (
         <Tag color={text === 'rss' ? 'green' : 'blue'}>
           {text.toUpperCase()}
@@ -163,6 +206,11 @@ export const AdminPanel: React.FC = () => {
       title: 'Status',
       dataIndex: 'active',
       key: 'active',
+      filters: [
+        { text: 'Active', value: true },
+        { text: 'Inactive', value: false },
+      ],
+      onFilter: (value: string | number | boolean, record: Source) => record.active === value,
       render: (active: boolean) => (
         <Tag color={active ? 'success' : 'error'}>
           {active ? 'Active' : 'Inactive'}
@@ -174,6 +222,11 @@ export const AdminPanel: React.FC = () => {
       dataIndex: 'last_crawled',
       key: 'last_crawled',
       render: (text: string) => text ? new Date(text).toLocaleString() : 'Never',
+      sorter: (a: Source, b: Source) => {
+        if (!a.last_crawled) return 1;
+        if (!b.last_crawled) return -1;
+        return new Date(a.last_crawled).getTime() - new Date(b.last_crawled).getTime();
+      },
     },
     {
       title: 'Actions',
@@ -183,6 +236,7 @@ export const AdminPanel: React.FC = () => {
           <Button
             type={record.active ? 'default' : 'primary'}
             onClick={() => handleToggleActive(record)}
+            className={record.active ? 'hover:text-red-500' : 'hover:text-green-500'}
           >
             {record.active ? 'Deactivate' : 'Activate'}
           </Button>
@@ -209,29 +263,48 @@ export const AdminPanel: React.FC = () => {
         </Button>
       </div>
 
-      <Card title="Add New Source" className="bg-white/10 backdrop-blur-md border-white/20">
+      <Card 
+        title={
+          <div className="text-white">
+            Add New Source
+            <span className="text-sm text-gray-400 ml-2">
+              Add RSS feeds or HTML pages to crawl
+            </span>
+          </div>
+        }
+        className="bg-white/10 backdrop-blur-md border-white/20"
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Enter URL"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="bg-white/5 border-white/20 text-white"
-            />
-            <Input
-              placeholder="Vendor Name"
-              value={vendor}
-              onChange={(e) => setVendor(e.target.value)}
-              className="bg-white/5 border-white/20 text-white"
-            />
-            <Select
-              value={type}
-              onChange={setType}
-              className="w-full"
-            >
-              <Option value="rss">RSS Feed</Option>
-              <Option value="html">HTML Page</Option>
-            </Select>
+            <div>
+              <div className="text-white text-sm mb-1">URL</div>
+              <Input
+                placeholder="https://example.com/feed"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="bg-white/5 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <div className="text-white text-sm mb-1">Vendor Name</div>
+              <Input
+                placeholder="Vendor"
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                className="bg-white/5 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <div className="text-white text-sm mb-1">Source Type</div>
+              <Select
+                value={type}
+                onChange={setType}
+                className="w-full"
+              >
+                <Option value="rss">RSS Feed</Option>
+                <Option value="html">HTML Page</Option>
+              </Select>
+            </div>
           </div>
           <Button
             type="primary"
@@ -245,12 +318,28 @@ export const AdminPanel: React.FC = () => {
         </div>
       </Card>
 
-      <Card title="Manage Sources" className="bg-white/10 backdrop-blur-md border-white/20">
+      <Card 
+        title={
+          <div className="text-white">
+            Manage Sources
+            <span className="text-sm text-gray-400 ml-2">
+              {sources.length} sources found
+            </span>
+          </div>
+        }
+        className="bg-white/10 backdrop-blur-md border-white/20"
+      >
         <Table
           columns={columns}
           dataSource={sources}
           rowKey="id"
           className="bg-white/5"
+          loading={tableLoading}
+          pagination={{
+            defaultPageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} items`,
+          }}
         />
       </Card>
     </div>
