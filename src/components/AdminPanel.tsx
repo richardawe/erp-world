@@ -33,6 +33,7 @@ export const AdminPanel: React.FC = () => {
   const [crawling, setCrawling] = useState(false);
   const [editingSource, setEditingSource] = useState<Source | null>(null);
   const [editVendorName, setEditVendorName] = useState('');
+  const [editUrl, setEditUrl] = useState('');
 
   // If not authenticated, show login form
   if (!user) {
@@ -236,35 +237,57 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleEditVendor = (record: Source) => {
+  const handleEditSource = (record: Source) => {
     setEditingSource(record);
     setEditVendorName(record.vendor);
+    setEditUrl(record.url);
   };
 
-  const handleSaveVendor = async () => {
-    if (!editingSource || !editVendorName.trim()) return;
+  const handleSaveSource = async () => {
+    if (!editingSource || !editVendorName.trim() || !editUrl.trim()) return;
+
+    if (!validateUrl(editUrl)) {
+      message.error('Please enter a valid URL');
+      return;
+    }
+
+    // Check for duplicate URL only if URL has changed
+    if (editUrl !== editingSource.url) {
+      const duplicateSource = sources.find(source => 
+        source.url === editUrl && source.id !== editingSource.id
+      );
+      if (duplicateSource) {
+        message.error('This URL already exists in the sources');
+        return;
+      }
+    }
 
     try {
       const { error } = await supabase
         .from('sources')
-        .update({ vendor: editVendorName.trim() })
+        .update({ 
+          vendor: editVendorName.trim(),
+          url: editUrl.trim()
+        })
         .eq('id', editingSource.id);
 
       if (error) throw error;
 
-      message.success('Vendor name updated successfully');
+      message.success('Source updated successfully');
       setEditingSource(null);
       setEditVendorName('');
+      setEditUrl('');
       fetchSources();
     } catch (error) {
-      message.error('Failed to update vendor name');
-      console.error('Error updating vendor:', error);
+      message.error('Failed to update source');
+      console.error('Error updating source:', error);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingSource(null);
     setEditVendorName('');
+    setEditUrl('');
   };
 
   const columns = [
@@ -279,11 +302,9 @@ export const AdminPanel: React.FC = () => {
             <Input
               value={editVendorName}
               onChange={(e) => setEditVendorName(e.target.value)}
-              onPressEnter={handleSaveVendor}
+              onPressEnter={handleSaveSource}
               className="w-32"
             />
-            <Button size="small" type="primary" onClick={handleSaveVendor}>Save</Button>
-            <Button size="small" onClick={handleCancelEdit}>Cancel</Button>
           </Space>
         ) : (
           <Space>
@@ -291,7 +312,7 @@ export const AdminPanel: React.FC = () => {
             <Button 
               size="small" 
               type="link" 
-              onClick={() => handleEditVendor(record)}
+              onClick={() => handleEditSource(record)}
             >
               Edit
             </Button>
@@ -303,10 +324,21 @@ export const AdminPanel: React.FC = () => {
       title: 'URL',
       dataIndex: 'url',
       key: 'url',
-      render: (text: string) => (
-        <a href={text} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-500">
-          {text}
-        </a>
+      render: (text: string, record: Source) => (
+        editingSource?.id === record.id ? (
+          <Space>
+            <Input
+              value={editUrl}
+              onChange={(e) => setEditUrl(e.target.value)}
+              onPressEnter={handleSaveSource}
+              className="w-64"
+            />
+          </Space>
+        ) : (
+          <a href={text} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-500">
+            {text}
+          </a>
+        )
       ),
     },
     {
@@ -355,28 +387,41 @@ export const AdminPanel: React.FC = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button
-            size="small"
-            onClick={() => handleRunCrawler(record.id)}
-            loading={crawling}
-            icon={<ThunderboltOutlined />}
-          >
-            Crawl
-          </Button>
-          <Button
-            size="small"
-            type="primary"
-            danger
-            onClick={() => handleDelete(record.id)}
-            icon={<DeleteOutlined />}
-          >
-            Delete
-          </Button>
-          <Switch
-            size="small"
-            checked={record.active}
-            onChange={(checked) => handleToggleActive(record)}
-          />
+          {editingSource?.id === record.id ? (
+            <>
+              <Button size="small" type="primary" onClick={handleSaveSource}>
+                Save
+              </Button>
+              <Button size="small" onClick={handleCancelEdit}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="small"
+                onClick={() => handleRunCrawler(record.id)}
+                loading={crawling}
+                icon={<ThunderboltOutlined />}
+              >
+                Crawl
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                danger
+                onClick={() => handleDelete(record.id)}
+                icon={<DeleteOutlined />}
+              >
+                Delete
+              </Button>
+              <Switch
+                size="small"
+                checked={record.active}
+                onChange={(checked) => handleToggleActive(record)}
+              />
+            </>
+          )}
         </Space>
       ),
     },
