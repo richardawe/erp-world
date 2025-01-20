@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Card, Input, Button, Select, message, Table, Space, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
 import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '../contexts/AuthContext';
+import { LoginForm } from './LoginForm';
 
 const { Option } = Select;
 
@@ -20,16 +22,24 @@ interface Source {
 }
 
 export const AdminPanel: React.FC = () => {
+  const { user, signOut } = useAuth();
   const [url, setUrl] = useState('');
   const [vendor, setVendor] = useState<string>('');
   const [type, setType] = useState<'rss' | 'html'>('rss');
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
 
+  // If not authenticated, show login form
+  if (!user) {
+    return <LoginForm />;
+  }
+
   // Fetch sources on component mount
   React.useEffect(() => {
-    fetchSources();
-  }, []);
+    if (user) {
+      fetchSources();
+    }
+  }, [user]);
 
   const fetchSources = async () => {
     try {
@@ -113,6 +123,16 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      message.success('Logged out successfully');
+    } catch (error) {
+      message.error('Failed to log out');
+      console.error('Error signing out:', error);
+    }
+  };
+
   const columns = [
     {
       title: 'Vendor',
@@ -178,6 +198,17 @@ export const AdminPanel: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white">Admin Panel</h2>
+        <Button 
+          icon={<LogoutOutlined />} 
+          onClick={handleSignOut}
+          danger
+        >
+          Sign Out
+        </Button>
+      </div>
+
       <Card title="Add New Source" className="bg-white/10 backdrop-blur-md border-white/20">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
