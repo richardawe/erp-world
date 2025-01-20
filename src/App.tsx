@@ -5,10 +5,11 @@ import { SearchBar } from './components/SearchBar';
 import { VendorInfo } from './components/VendorInfo';
 import { AITab } from './components/AITab';
 import { AIERPSummary } from './components/AIERPSummary';
+import { AdminPanel } from './components/AdminPanel';
 import type { Article, NewsSource } from './types';
 import { getVendorColor } from './utils/vendor';
 import { createClient } from '@supabase/supabase-js';
-import { Brain, Newspaper, Menu, X } from 'lucide-react';
+import { Brain, Newspaper, Menu, X, Settings } from 'lucide-react';
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -102,7 +103,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 })();
 
-type Tab = 'news' | 'ai';
+type Tab = 'news' | 'ai' | 'admin';
 
 export default function App() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -217,6 +218,17 @@ export default function App() {
                 <Brain className="w-4 h-4" />
                 AI in ERP
               </button>
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  activeTab === 'admin'
+                    ? 'bg-white text-gray-600'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Admin
+              </button>
             </div>
 
             {/* Filters (only show in news tab) */}
@@ -267,8 +279,10 @@ export default function App() {
                 </div>
               )}
             </>
-          ) : (
+          ) : activeTab === 'ai' ? (
             <AITab articles={articles} />
+          ) : (
+            <AdminPanel />
           )}
         </main>
       </div>
