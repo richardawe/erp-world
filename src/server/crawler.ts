@@ -48,13 +48,19 @@ interface CrawlerItem {
 }
 
 // Initialize Supabase client with proper environment variables
-const supabaseUrl = process.env.VITE_SUPABASE_URL ?? '';
-const supabaseKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ?? '';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseKey,
+    env: process.env.NODE_ENV
+  });
+  throw new Error('Missing required Supabase configuration');
 }
 
+// Initialize Supabase client with detailed error logging
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: false,
@@ -64,6 +70,26 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     schema: 'public'
   }
 });
+
+// Test database connection immediately
+(async () => {
+  try {
+    const { error } = await supabase.from('sources').select('count', { count: 'exact', head: true });
+    if (error) {
+      console.error('Supabase connection test failed:', {
+        error: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code
+      });
+      throw error;
+    }
+    console.log('Successfully connected to Supabase');
+  } catch (error) {
+    console.error('Failed to connect to Supabase:', error);
+    throw error;
+  }
+})();
 
 // Initialize schema cache
 async function initializeSchema() {
