@@ -208,6 +208,7 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
       body: JSON.stringify({ 
         error: "Failed to run scheduled crawler",
         message: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()
       })
     };
@@ -227,9 +228,9 @@ export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => 
   // Handle OPTIONS request (preflight)
   if (event.httpMethod === 'OPTIONS') {
     return {
-      statusCode: 200,  // Changed from 204 to 200
+      statusCode: 200,
       headers: corsHeaders,
-      body: ''  // Empty body for OPTIONS response
+      body: JSON.stringify({ message: 'OK' })  // Return valid JSON even for OPTIONS
     };
   }
 
@@ -238,19 +239,44 @@ export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => 
     return {
       statusCode: 405,
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method not allowed' })
+      body: JSON.stringify({ 
+        error: 'Method not allowed',
+        message: `Method ${event.httpMethod} is not allowed. Only POST requests are accepted.`
+      })
     };
   }
 
-  // Run the crawler
-  const response = await scheduledCrawlerHandler();
-  
-  // Add CORS headers to the response
-  return {
-    ...response,
-    headers: {
-      ...corsHeaders,
-      ...response.headers
+  try {
+    // Run the crawler
+    const response = await scheduledCrawlerHandler();
+    
+    // Ensure response has a body
+    if (!response.body) {
+      response.body = JSON.stringify({
+        message: 'Crawler completed with no response body',
+        timestamp: new Date().toISOString()
+      });
     }
-  };
+    
+    // Add CORS headers to the response
+    return {
+      ...response,
+      headers: {
+        ...corsHeaders,
+        ...response.headers
+      }
+    };
+  } catch (error) {
+    console.error("Error in handler:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to run crawler",
+        message: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      })
+    };
+  }
 }; 

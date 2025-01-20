@@ -185,29 +185,68 @@ export const AdminPanel: React.FC = () => {
         body: JSON.stringify({ manual: true })
       });
 
-      let errorMessage = 'Failed to run crawler';
-      const responseClone = response.clone();
+      // Get the response text first
+      const responseText = await response.text();
       
+      // Check if response is empty
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+
+      // Try to parse as JSON
+      let data;
       try {
-        const data = await response.json();
-        if (!response.ok) {
-          errorMessage = data.message || data.error || 'Failed to run crawler';
-          throw new Error(errorMessage);
-        }
-        message.success({ content: `Crawler completed successfully. Found ${data.newItems} new items.`, key: 'crawling' });
+        data = JSON.parse(responseText);
       } catch (parseError) {
-        // If we can't parse the response as JSON, use the response text from the clone
-        const text = await responseClone.text();
-        errorMessage = text || 'Failed to run crawler';
+        console.error('Failed to parse response:', responseText);
+        throw new Error(`Invalid response format: ${responseText}`);
+      }
+      
+      if (!response.ok) {
+        const errorMessage = data.message || data.error || 'Failed to run crawler';
+        console.error('Crawler error details:', data);
         throw new Error(errorMessage);
       }
 
+      message.success({ 
+        content: `Crawler completed successfully. Found ${data.newItems} new items.`, 
+        key: 'crawling' 
+      });
       fetchSources(); // Refresh the sources to update last_crawled timestamps
     } catch (error: any) {
       console.error('Error running crawler:', error);
+      // Show error in a modal for better visibility
+      Modal.error({
+        title: 'Crawler Error',
+        content: (
+          <div>
+            <p>{error.message || 'Unknown error'}</p>
+            {error.details && (
+              <div className="mt-4">
+                <p className="font-bold">Error Details:</p>
+                <pre className="mt-2 p-4 bg-gray-100 rounded overflow-auto max-h-96">
+                  {error.details}
+                </pre>
+              </div>
+            )}
+          </div>
+        ),
+        width: 800,
+      });
       message.error({ 
-        content: `Failed to run crawler: ${error.message || 'Unknown error'}`, 
-        key: 'crawling' 
+        content: 'Failed to run crawler. Click for details.', 
+        key: 'crawling',
+        onClick: () => {
+          Modal.error({
+            title: 'Crawler Error Details',
+            content: (
+              <pre className="overflow-auto max-h-96">
+                {JSON.stringify(error, null, 2)}
+              </pre>
+            ),
+            width: 800,
+          });
+        }
       });
     } finally {
       setCrawling(false);

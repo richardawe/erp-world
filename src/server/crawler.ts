@@ -41,6 +41,12 @@ interface Article {
   is_ai_related: boolean;
 }
 
+interface CrawlerItem {
+  title: string;
+  content: string;
+  url: string;
+}
+
 // Initialize Supabase client with proper environment variables
 const supabaseUrl = process.env.VITE_SUPABASE_URL ?? '';
 const supabaseKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -78,27 +84,9 @@ const parser = new Parser({
   }
 });
 
-// Fetch active sources from the database
-async function fetchSources(): Promise<Source[]> {
-  try {
-    const { data, error } = await supabase
-      .from('sources')
-      .select('*')
-      .eq('active', true);
-
-    if (error) {
-      throw error;
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching sources:', error);
-    return [];
-  }
-}
-
 // Update the RSS crawler
-async function crawlRSSFeed(source: Source): Promise<void> {
+async function crawlRSSFeed(source: Source): Promise<CrawlerItem[]> {
+  const crawledItems: CrawlerItem[] = [];
   try {
     console.log(`Attempting to fetch RSS feed from ${source.url}`);
     const feed = await parser.parseURL(source.url);
@@ -106,7 +94,7 @@ async function crawlRSSFeed(source: Source): Promise<void> {
     
     if (!feed.items || feed.items.length === 0) {
       console.warn(`No items found in feed for ${source.vendor}`);
-      return;
+      return crawledItems;
     }
     
     for (const item of feed.items) {
@@ -185,7 +173,7 @@ async function crawlRSSFeed(source: Source): Promise<void> {
           summary: item.contentSnippet || '',
           content,
           source: feed.title || source.vendor,
-          source_id: source.id,  // Add source_id
+          source_id: source.id,
           url: item.link || '',
           image_url: imageUrl,
           published_at: item.pubDate ? parseDate(item.pubDate) : new Date(),
@@ -214,6 +202,13 @@ async function crawlRSSFeed(source: Source): Promise<void> {
         } else {
           console.log(`Successfully inserted/updated article from ${source.vendor}: ${article.title}`);
           
+          // Add to crawled items
+          crawledItems.push({
+            title: article.title,
+            content: article.content,
+            url: article.url
+          });
+          
           // Update last_crawled timestamp for the source
           await supabase
             .from('sources')
@@ -231,6 +226,7 @@ async function crawlRSSFeed(source: Source): Promise<void> {
       console.error('Stack trace:', error.stack);
     }
   }
+  return crawledItems;
 }
 
 // Update the main crawler function
@@ -264,39 +260,28 @@ export async function main() {
       return [];
     }
 
-    const results = [];
+    const allCrawledItems: CrawlerItem[] = [];
     for (const source of dbSources) {
       try {
         console.log(`Processing source: ${source.vendor} (${source.url})`);
         if (source.type === 'rss') {
-          await crawlRSSFeed(source);
+          const items = await crawlRSSFeed(source);
+          allCrawledItems.push(...items);
         }
-        // Add result to track processed sources
-        results.push({
-          source: source.vendor,
-          url: source.url,
-          status: 'success'
-        });
       } catch (sourceError) {
         console.error(`Error processing source ${source.vendor}:`, {
           error: sourceError,
           message: sourceError instanceof Error ? sourceError.message : 'Unknown error',
           stack: sourceError instanceof Error ? sourceError.stack : undefined
         });
-        results.push({
-          source: source.vendor,
-          url: source.url,
-          status: 'error',
-          error: sourceError instanceof Error ? sourceError.message : 'Unknown error'
-        });
       }
     }
 
     console.log("Crawler execution completed", {
       totalSources: dbSources.length,
-      results
+      totalItems: allCrawledItems.length
     });
-    return results;
+    return allCrawledItems;
   } catch (error) {
     console.error("Error in main crawler function:", {
       error,
@@ -455,6 +440,15 @@ async function categorizeArticle(title: string, content: string): Promise<Catego
   }
   
   return categories;
+}
+
+// Update type annotations in the HTML processing
+function processHTML(html: string): string {
+  const $ = cheerio.load(html);
+  $('img').each((_: number, el: cheerio.Element) => {
+    $(el).remove();
+  });
+  return $.html();
 }
 
 // Only run crawler directly if this file is being run as a script
