@@ -31,6 +31,8 @@ export const AdminPanel: React.FC = () => {
   const [sources, setSources] = useState<Source[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [crawling, setCrawling] = useState(false);
+  const [editingSource, setEditingSource] = useState<Source | null>(null);
+  const [editVendorName, setEditVendorName] = useState('');
 
   // If not authenticated, show login form
   if (!user) {
@@ -200,22 +202,20 @@ export const AdminPanel: React.FC = () => {
         headers: Object.fromEntries(response.headers.entries())
       });
 
-      if (!response.ok) {
-        let errorMessage = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          console.error('Error response:', errorData);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          const text = await response.text();
-          console.error('Raw error response:', text);
-          errorMessage = text || errorMessage;
-        }
-        throw new Error(errorMessage);
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', responseText);
+        throw new Error('Invalid JSON response from server');
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        console.error('Error response:', data);
+        throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
+      }
+
       console.log('Success response:', data);
       
       message.success({
@@ -236,41 +236,35 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleUpdateOracleFeed = async () => {
+  const handleEditVendor = (record: Source) => {
+    setEditingSource(record);
+    setEditVendorName(record.vendor);
+  };
+
+  const handleSaveVendor = async () => {
+    if (!editingSource || !editVendorName.trim()) return;
+
     try {
-      message.loading({ content: 'Updating Oracle feed...', key: 'oracle' });
-      const response = await fetch('/.netlify/functions/scheduledCrawler', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ updateOracleFeed: true })
-      });
+      const { error } = await supabase
+        .from('sources')
+        .update({ vendor: editVendorName.trim() })
+        .eq('id', editingSource.id);
 
-      if (!response.ok) {
-        const responseClone = response.clone();
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update Oracle feed');
-        } catch {
-          const text = await responseClone.text();
-          throw new Error(text || 'Failed to update Oracle feed');
-        }
-      }
+      if (error) throw error;
 
-      message.success({ content: 'Successfully updated Oracle feed', key: 'oracle' });
-      await fetchSources(); // Refresh the sources list
-      // Run crawler for Oracle source
-      const oracleSource = sources.find(s => s.vendor === 'Oracle');
-      if (oracleSource) {
-        await handleRunCrawler(oracleSource.id);
-      }
+      message.success('Vendor name updated successfully');
+      setEditingSource(null);
+      setEditVendorName('');
+      fetchSources();
     } catch (error) {
-      message.error({
-        content: `Failed to update Oracle feed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        key: 'oracle'
-      });
+      message.error('Failed to update vendor name');
+      console.error('Error updating vendor:', error);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSource(null);
+    setEditVendorName('');
   };
 
   const columns = [
@@ -279,6 +273,31 @@ export const AdminPanel: React.FC = () => {
       dataIndex: 'vendor',
       key: 'vendor',
       sorter: (a: Source, b: Source) => a.vendor.localeCompare(b.vendor),
+      render: (text: string, record: Source) => (
+        editingSource?.id === record.id ? (
+          <Space>
+            <Input
+              value={editVendorName}
+              onChange={(e) => setEditVendorName(e.target.value)}
+              onPressEnter={handleSaveVendor}
+              className="w-32"
+            />
+            <Button size="small" type="primary" onClick={handleSaveVendor}>Save</Button>
+            <Button size="small" onClick={handleCancelEdit}>Cancel</Button>
+          </Space>
+        ) : (
+          <Space>
+            {text}
+            <Button 
+              size="small" 
+              type="link" 
+              onClick={() => handleEditVendor(record)}
+            >
+              Edit
+            </Button>
+          </Space>
+        )
+      ),
     },
     {
       title: 'URL',
@@ -375,12 +394,6 @@ export const AdminPanel: React.FC = () => {
             icon={<ThunderboltOutlined />}
           >
             Run Crawler
-          </Button>
-          <Button
-            onClick={handleUpdateOracleFeed}
-            icon={<SyncOutlined />}
-          >
-            Update Oracle Feed
           </Button>
           <Button
             onClick={handleSignOut}
