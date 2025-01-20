@@ -310,7 +310,7 @@ export async function main(batchSize = 3, sourceId?: number) {
     if (!dbSources || dbSources.length === 0) {
       const message = sourceId ? `Source ${sourceId} not found or not active` : "No active sources found";
       console.log(message);
-      return [];
+      return { items: [], message };
     }
 
     console.log(`Found ${dbSources.length} active source(s):`, 
@@ -320,6 +320,7 @@ export async function main(batchSize = 3, sourceId?: number) {
     // Process sources
     const results: CrawlerItem[] = [];
     const sourcesToProcess = sourceId ? dbSources : dbSources.slice(0, batchSize);
+    const errors: Array<{ source: string; error: string }> = [];
     
     console.log(`Processing ${sourcesToProcess.length} source(s)`);
     
@@ -331,6 +332,10 @@ export async function main(batchSize = 3, sourceId?: number) {
         results.push(...items);
       } catch (sourceError) {
         console.error(`Error processing source ${dbSource.vendor}:`, sourceError);
+        errors.push({
+          source: dbSource.vendor,
+          error: sourceError instanceof Error ? sourceError.message : 'Unknown error'
+        });
         // Continue with next source even if one fails
         continue;
       }
@@ -339,7 +344,11 @@ export async function main(batchSize = 3, sourceId?: number) {
     console.log(`Completed processing ${sourcesToProcess.length} source(s)`);
     console.log(`Found ${results.length} new items`);
     
-    return results;
+    return {
+      items: results,
+      message: `Successfully processed ${sourcesToProcess.length} source(s) and found ${results.length} new items`,
+      errors: errors.length > 0 ? errors : undefined
+    };
   } catch (error) {
     console.error("Error in main crawler function:", {
       error,

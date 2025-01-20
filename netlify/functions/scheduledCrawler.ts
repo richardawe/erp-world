@@ -123,16 +123,15 @@ export default async function handler(event: HandlerEvent) {
         console.log(`Crawling${sourceId ? ` source ${sourceId}` : ' all sources'}...`);
         
         const result = await main(3, sourceId);
-        console.log('Successfully completed manual crawl');
+        console.log('Successfully completed manual crawl:', result);
         
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({ 
-            message: sourceId ? 
-              `Successfully crawled source ${sourceId}` : 
-              'Successfully ran crawler',
-            result 
+            message: result.message,
+            result: result.items,
+            errors: result.errors
           }),
         };
       } catch (manualError) {
