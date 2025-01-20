@@ -154,6 +154,12 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
 
       return {
         statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ 
           message: "Scheduled Crawler executed successfully",
           newItems: newItems?.length || 0,
@@ -168,6 +174,12 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
     console.error("Error running scheduled crawler:", error);
     return {
       statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ 
         error: "Failed to run scheduled crawler",
         message: error instanceof Error ? error.message : "Unknown error",
@@ -184,27 +196,36 @@ export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => 
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
   };
 
   // Handle OPTIONS request (preflight)
   if (event.httpMethod === 'OPTIONS') {
     return {
-      statusCode: 204,
+      statusCode: 200,  // Changed from 204 to 200
       headers: corsHeaders,
-      body: ''
+      body: ''  // Empty body for OPTIONS response
     };
   }
 
-  // Run the crawler for both scheduled events and manual triggers
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  // Run the crawler
   const response = await scheduledCrawlerHandler();
   
   // Add CORS headers to the response
   return {
-    statusCode: response.statusCode,
+    ...response,
     headers: {
       ...corsHeaders,
-      'Content-Type': 'application/json'
-    },
-    body: response.body
+      ...response.headers
+    }
   };
 }; 
