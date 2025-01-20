@@ -1,4 +1,4 @@
-export type ERPVendor = 'SAP' | 'Oracle' | 'Microsoft' | 'Workday' | 'Unit4' | 'Infor' | 'Forterro';
+export type ERPVendor = 'SAP' | 'Oracle' | 'Microsoft' | 'Workday' | 'Unit4' | 'Infor';
 
 export type NewsSource = ERPVendor | 'TechCrunch' | 'VentureBeat';
 
