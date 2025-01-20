@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Input, Button, Select, message, Table, Space, Tag, Modal } from 'antd';
-import { PlusOutlined, DeleteOutlined, LogoutOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, LogoutOutlined, ExclamationCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginForm } from './LoginForm';
@@ -30,6 +30,7 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
+  const [crawling, setCrawling] = useState(false);
 
   // If not authenticated, show login form
   if (!user) {
@@ -170,6 +171,27 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleRunCrawler = async () => {
+    try {
+      setCrawling(true);
+      message.loading({ content: 'Running crawler...', key: 'crawling', duration: 0 });
+      
+      const { error } = await supabase.functions.invoke('scheduledCrawler', {
+        body: { manual: true }
+      });
+
+      if (error) throw error;
+
+      message.success({ content: 'Crawler completed successfully', key: 'crawling' });
+      fetchSources(); // Refresh the sources to update last_crawled timestamps
+    } catch (error) {
+      console.error('Error running crawler:', error);
+      message.error({ content: 'Failed to run crawler', key: 'crawling' });
+    } finally {
+      setCrawling(false);
+    }
+  };
+
   const columns = [
     {
       title: 'Vendor',
@@ -254,13 +276,24 @@ export const AdminPanel: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Admin Panel</h2>
-        <Button 
-          icon={<LogoutOutlined />} 
-          onClick={handleSignOut}
-          danger
-        >
-          Sign Out
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            icon={<SyncOutlined spin={crawling} />}
+            onClick={handleRunCrawler}
+            loading={crawling}
+            className="mr-2"
+          >
+            Run Crawler
+          </Button>
+          <Button 
+            icon={<LogoutOutlined />} 
+            onClick={handleSignOut}
+            danger
+          >
+            Sign Out
+          </Button>
+        </Space>
       </div>
 
       <Card 

@@ -107,6 +107,7 @@ type Tab = 'news' | 'ai' | 'admin';
 
 export default function App() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('news');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [filters, setFilters] = useState({
@@ -114,36 +115,48 @@ export default function App() {
     search: ''
   });
 
-  // Fetch articles on mount
+  // Fetch articles when filters change
   useEffect(() => {
     async function fetchArticles() {
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .order('published_at', { ascending: false });
+      setLoading(true);
+      try {
+        let query = supabase
+          .from('articles')
+          .select('*')
+          .order('published_at', { ascending: false });
 
-      if (error) {
+        if (filters.vendor !== 'All') {
+          query = query.eq('vendor', filters.vendor);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching articles:', error);
+        } else {
+          // Transform the data to ensure proper types
+          const transformedArticles = (data || []).map(article => ({
+            ...article,
+            published_at: new Date(article.published_at),
+            is_ai_related: article.is_ai_related || false
+          }));
+          setArticles(transformedArticles);
+        }
+      } catch (error) {
         console.error('Error fetching articles:', error);
-      } else {
-        // Transform the data to ensure proper types
-        const transformedArticles = (data || []).map(article => ({
-          ...article,
-          published_at: new Date(article.published_at),
-          is_ai_related: article.is_ai_related || false
-        }));
-        setArticles(transformedArticles);
+      } finally {
+        setLoading(false);
       }
     }
     fetchArticles();
-  }, []);
+  }, [filters.vendor]); // Re-fetch when vendor changes
 
-  // Filter articles based on vendor and search
+  // Filter articles based on search
   const filteredArticles = articles.filter(article => {
-    const vendorMatch = filters.vendor === 'All' || article.vendor === filters.vendor;
     const searchMatch = filters.search === '' || 
       article.title.toLowerCase().includes(filters.search.toLowerCase()) ||
       article.summary.toLowerCase().includes(filters.search.toLowerCase());
-    return vendorMatch && searchMatch;
+    return searchMatch;
   });
 
   return (
@@ -263,20 +276,33 @@ export default function App() {
                 </div>
               )}
 
-              {/* Articles Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredArticles.map((article) => (
-                  <NewsCard key={article.url} article={article} />
-                ))}
-              </div>
-
-              {/* No Results */}
-              {filteredArticles.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-white text-lg">
-                    No articles found. Try adjusting your filters.
-                  </p>
+              {/* Loading State */}
+              {loading ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-white/10 rounded-xl h-64"></div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <>
+                  {/* Articles Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredArticles.map((article) => (
+                      <NewsCard key={article.url} article={article} />
+                    ))}
+                  </div>
+
+                  {/* No Results */}
+                  {filteredArticles.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-white text-lg">
+                        No articles found. Try adjusting your filters.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </>
           ) : activeTab === 'ai' ? (
