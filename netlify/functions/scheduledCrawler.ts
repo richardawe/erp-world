@@ -118,100 +118,62 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
       validateEnv();
     } catch (envError) {
       console.error("Environment validation failed:", envError);
-      throw envError;
+      throw new Error(`Environment validation failed: ${envError instanceof Error ? envError.message : 'Unknown error'}`);
     }
     
-    // Log configuration (without sensitive values)
-    console.log("Scheduled Crawler configuration:", {
-      supabaseUrl: process.env.VITE_SUPABASE_URL,
-      hasServiceKey: !!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
-      hasLinkedInToken: !!LINKEDIN_ACCESS_TOKEN,
-      hasOpenRouterKey: !!OPENROUTER_API_KEY,
-      nodeEnv: process.env.NODE_ENV,
-      timestamp: new Date().toISOString()
+    // Run crawler and get new items
+    console.log("Starting crawler execution...");
+    const crawlerResult = await runCrawler();
+    console.log("Crawler execution completed:", {
+      resultType: typeof crawlerResult,
+      isArray: Array.isArray(crawlerResult),
+      length: Array.isArray(crawlerResult) ? crawlerResult.length : 'not an array'
     });
-    
-    try {
-      // Run crawler and get new items
-      console.log("Starting crawler execution...");
-      const crawlerResult = await runCrawler();
-      console.log("Crawler execution completed:", {
-        resultType: typeof crawlerResult,
-        isArray: Array.isArray(crawlerResult),
-        length: Array.isArray(crawlerResult) ? crawlerResult.length : 'not an array'
-      });
 
-      if (!crawlerResult) {
-        throw new Error('Crawler returned no result');
-      }
+    if (!crawlerResult) {
+      throw new Error('Crawler returned no result');
+    }
 
-      const newItems = crawlerResult as unknown as CrawlerItem[];
-      console.log(`Found ${newItems?.length || 0} new items`);
+    const newItems = crawlerResult as unknown as CrawlerItem[];
+    console.log(`Found ${newItems?.length || 0} new items`);
 
-      // Process each new item
-      if (newItems && newItems.length > 0) {
-        for (const item of newItems) {
-          try {
-            // Generate summary
-            console.log(`Generating summary for: ${item.title}`);
-            const summary = await generateSummary(item.content);
+    // Process each new item
+    if (newItems && newItems.length > 0) {
+      for (const item of newItems) {
+        try {
+          // Generate summary
+          console.log(`Generating summary for: ${item.title}`);
+          const summary = await generateSummary(item.content);
 
-            // Post to LinkedIn
-            if (summary) {
-              console.log(`Posting to LinkedIn: ${item.title}`);
-              await postToLinkedIn(summary, item.url);
-            }
-          } catch (itemError) {
-            console.error(`Error processing item ${item.title}:`, itemError);
-            // Continue with next item even if one fails
-            continue;
+          // Post to LinkedIn
+          if (summary) {
+            console.log(`Posting to LinkedIn: ${item.title}`);
+            await postToLinkedIn(summary, item.url);
           }
+        } catch (itemError) {
+          console.error(`Error processing item ${item.title}:`, itemError);
+          // Continue with next item even if one fails
+          continue;
         }
       }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          message: "Scheduled Crawler executed successfully",
-          newItems: newItems?.length || 0,
-          timestamp: new Date().toISOString()
-        })
-      };
-    } catch (crawlerError) {
-      console.error("Error during crawler execution:", {
-        error: crawlerError,
-        message: crawlerError instanceof Error ? crawlerError.message : 'Unknown error',
-        stack: crawlerError instanceof Error ? crawlerError.stack : undefined
-      });
-      throw new Error(`Crawler execution failed: ${crawlerError instanceof Error ? crawlerError.message : 'Unknown error'}`);
     }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ 
+        message: "Scheduled Crawler executed successfully",
+        newItems: newItems?.length || 0,
+        timestamp: new Date().toISOString()
+      })
+    };
   } catch (error) {
-    console.error("Error running scheduled crawler:", {
+    console.error("Error in scheduledCrawlerHandler:", {
       error,
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     });
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        error: "Failed to run scheduled crawler",
-        message: error instanceof Error ? error.message : "Unknown error",
-        details: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
-      })
-    };
+    
+    throw error; // Let the main handler handle the error response
   }
 };
 
@@ -230,7 +192,7 @@ export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => 
     return {
       statusCode: 200,
       headers: corsHeaders,
-      body: JSON.stringify({ message: 'OK' })  // Return valid JSON even for OPTIONS
+      body: JSON.stringify({ message: 'OK' })
     };
   }
 
@@ -250,30 +212,23 @@ export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => 
     // Run the crawler
     const response = await scheduledCrawlerHandler();
     
-    // Ensure response has a body
-    if (!response.body) {
-      response.body = JSON.stringify({
-        message: 'Crawler completed with no response body',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Add CORS headers to the response
+    // Ensure response has CORS headers and valid JSON body
     return {
       ...response,
-      headers: {
-        ...corsHeaders,
-        ...response.headers
-      }
+      headers: corsHeaders,
+      body: response.body || JSON.stringify({
+        message: 'Crawler completed successfully',
+        timestamp: new Date().toISOString()
+      })
     };
   } catch (error) {
-    console.error("Error in handler:", error);
+    console.error('Error in handler:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        error: "Failed to run crawler",
-        message: error instanceof Error ? error.message : "Unknown error",
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
         details: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()
       })
