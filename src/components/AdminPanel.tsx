@@ -172,17 +172,16 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleRunCrawler = async () => {
+    setCrawling(true);
     try {
-      setCrawling(true);
       message.loading({ content: 'Running crawler...', key: 'crawling', duration: 0 });
       
       const response = await fetch('/.netlify/functions/scheduledCrawler', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({ manual: true })
+        body: JSON.stringify({ manual: true }),
       });
 
       // Get the response text first

@@ -1,5 +1,5 @@
-import { HandlerEvent, HandlerResponse } from "@netlify/functions";
-import { main as runCrawler } from "../../src/server/crawler";
+import { Handler, HandlerEvent } from '@netlify/functions';
+import { main as runCrawler } from '../../src/server/crawler';
 import OpenAI from 'openai';
 
 // LinkedIn API configuration
@@ -17,20 +17,8 @@ const openai = new OpenAI({
   }
 });
 
-// Validate environment variables
-function validateEnv() {
-  const required = [
-    'VITE_SUPABASE_URL', 
-    'VITE_SUPABASE_SERVICE_ROLE_KEY',
-    'LINKEDIN_ACCESS_TOKEN',
-    'OPENROUTER_API_KEY'
-  ];
-  const missing = required.filter(key => !process.env[key]);
-  
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-}
+// Maximum number of sources to process in one batch
+const BATCH_SIZE = 3;
 
 async function generateSummary(content: string): Promise<string> {
   try {
@@ -103,190 +91,78 @@ async function postToLinkedIn(summary: string, articleUrl: string) {
   }
 }
 
-interface CrawlerItem {
-  title: string;
-  content: string;
-  url: string;
-}
-
-const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
+// Main handler function
+export const handler: Handler = async (event: HandlerEvent) => {
   try {
-    console.log("Starting scheduled crawler...");
-    
-    // Log environment state
-    console.log("Environment state:", {
-      hasSupabaseUrl: !!process.env.VITE_SUPABASE_URL,
-      hasSupabaseKey: !!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
-      hasLinkedInToken: !!LINKEDIN_ACCESS_TOKEN,
-      hasOpenRouterKey: !!OPENROUTER_API_KEY,
-      nodeEnv: process.env.NODE_ENV
-    });
-    
-    // Validate environment variables before running
-    try {
-      validateEnv();
-    } catch (envError) {
-      console.error("Environment validation failed:", {
-        error: envError,
-        message: envError instanceof Error ? envError.message : 'Unknown error',
-        stack: envError instanceof Error ? envError.stack : undefined
-      });
-      throw new Error(`Environment validation failed: ${envError instanceof Error ? envError.message : 'Unknown error'}`);
-    }
-    
-    // Run crawler and get new items
-    console.log("Starting crawler execution...");
-    let crawlerResult;
-    try {
-      crawlerResult = await runCrawler();
-      console.log("Raw crawler result:", crawlerResult);
-    } catch (crawlerError) {
-      console.error("Crawler execution failed:", {
-        error: crawlerError,
-        message: crawlerError instanceof Error ? crawlerError.message : 'Unknown error',
-        stack: crawlerError instanceof Error ? crawlerError.stack : undefined
-      });
-      throw new Error(`Crawler execution failed: ${crawlerError instanceof Error ? crawlerError.message : 'Unknown error'}`);
-    }
-    
-    console.log("Crawler execution completed:", {
-      resultType: typeof crawlerResult,
-      isArray: Array.isArray(crawlerResult),
-      length: Array.isArray(crawlerResult) ? crawlerResult.length : 'not an array',
-      value: crawlerResult
-    });
-
-    if (!crawlerResult) {
-      throw new Error('Crawler returned no result');
+    // Validate environment variables first
+    const required = [
+      'VITE_SUPABASE_URL', 
+      'VITE_SUPABASE_SERVICE_ROLE_KEY',
+      'LINKEDIN_ACCESS_TOKEN',
+      'OPENROUTER_API_KEY'
+    ];
+    const missing = required.filter(key => !process.env[key]);
+    if (missing.length > 0) {
+      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
     }
 
-    const newItems = crawlerResult as unknown as CrawlerItem[];
-    console.log(`Found ${newItems?.length || 0} new items:`, newItems);
-
-    // Process each new item
-    if (newItems && newItems.length > 0) {
-      for (const item of newItems) {
-        try {
-          // Generate summary
-          console.log(`Generating summary for: ${item.title}`);
-          const summary = await generateSummary(item.content);
-
-          // Post to LinkedIn
-          if (summary) {
-            console.log(`Posting to LinkedIn: ${item.title}`);
+    // For manual triggers via HTTP POST
+    if (event.httpMethod === 'POST') {
+      console.log('Starting manual crawler execution...');
+      const result = await runCrawler(BATCH_SIZE);
+      
+      // Generate summary for new articles
+      if (result && result.length > 0) {
+        for (const item of result) {
+          try {
+            const summary = await generateSummary(item.content);
             await postToLinkedIn(summary, item.url);
+          } catch (error) {
+            console.error('Error processing article:', error);
+            // Continue with next article even if one fails
           }
-        } catch (itemError) {
-          console.error(`Error processing item ${item.title}:`, {
-            error: itemError,
-            message: itemError instanceof Error ? itemError.message : 'Unknown error',
-            stack: itemError instanceof Error ? itemError.stack : undefined
-          });
-          // Continue with next item even if one fails
-          continue;
         }
       }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ success: true, result })
+      };
+    }
+    
+    // For scheduled events
+    if (event.body === '{"scheduled":true}') {
+      console.log('Starting scheduled crawler execution...');
+      const newItems = await runCrawler(BATCH_SIZE);
+      
+      // Generate summary and post to LinkedIn for new articles
+      if (newItems && newItems.length > 0) {
+        for (const item of newItems) {
+          try {
+            const summary = await generateSummary(item.content);
+            await postToLinkedIn(summary, item.url);
+          } catch (error) {
+            console.error('Error processing article:', error);
+            // Continue with next article even if one fails
+          }
+        }
+      }
+
+      return { statusCode: 200 };
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ 
-        message: "Scheduled Crawler executed successfully",
-        newItems: newItems?.length || 0,
-        timestamp: new Date().toISOString()
-      })
-    };
-  } catch (error) {
-    console.error("Error in scheduledCrawlerHandler:", {
-      error,
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      type: error?.constructor?.name
-    });
-    
-    throw error; // Let the main handler handle the error response
-  }
-};
-
-// Export the handler function
-export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
-  // Set CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
-
-  // Log incoming request
-  console.log("Incoming request:", {
-    method: event.httpMethod,
-    path: event.path,
-    headers: event.headers,
-    queryStringParameters: event.queryStringParameters,
-    body: event.body ? 'present' : 'missing'
-  });
-
-  // Handle OPTIONS request (preflight)
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: 'OK' })
-    };
-  }
-
-  // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
+    // For unsupported methods
     return {
       statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ 
-        error: 'Method not allowed',
-        message: `Method ${event.httpMethod} is not allowed. Only POST requests are accepted.`
-      })
-    };
-  }
-
-  try {
-    // Run the crawler
-    const response = await scheduledCrawlerHandler();
-    
-    // Log successful response
-    console.log("Successful response:", {
-      statusCode: response.statusCode,
-      hasBody: !!response.body,
-      bodyLength: response.body?.length
-    });
-    
-    // Ensure response has CORS headers and valid JSON body
-    return {
-      ...response,
-      headers: corsHeaders,
-      body: response.body || JSON.stringify({
-        message: 'Crawler completed successfully',
-        timestamp: new Date().toISOString()
-      })
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   } catch (error) {
-    // Log error in detail
-    console.error('Error in handler:', {
-      error,
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      type: error?.constructor?.name,
-      keys: error ? Object.keys(error) : []
-    });
-    
+    console.error('Error in handler:', error);
     return {
       statusCode: 500,
-      headers: corsHeaders,
       body: JSON.stringify({
-        error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: error instanceof Error ? error.stack : undefined,
-        type: error?.constructor?.name,
-        timestamp: new Date().toISOString()
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       })
     };
   }

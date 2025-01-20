@@ -10,7 +10,10 @@
     "build:crawler": "npm run clean && tsc -p tsconfig.crawler.json",
     "lint": "eslint .",
     "preview": "vite preview",
-    "crawl": "npm run build:crawler && node ./dist/server/crawler.js"
+    "crawl": "npm run build:crawler && node ./dist/server/crawler.js",
+    "dev:functions": "netlify dev",
+    "build:functions": "netlify build",
+    "debug:crawler": "NODE_ENV=development NODE_OPTIONS='--inspect' netlify dev"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",

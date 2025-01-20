@@ -175,7 +175,7 @@ async function crawlRSSFeed(source: Source): Promise<CrawlerItem[]> {
           source: feed.title || source.vendor,
           source_id: source.id,
           url: item.link || '',
-          image_url: imageUrl,
+          image_url: imageUrl || null,
           published_at: item.pubDate ? parseDate(item.pubDate) : new Date(),
           vendor: source.vendor,
           categories,
@@ -230,7 +230,7 @@ async function crawlRSSFeed(source: Source): Promise<CrawlerItem[]> {
 }
 
 // Update the main crawler function
-export async function main() {
+export async function main(batchSize = 3) {
   try {
     console.log("Initializing crawler...");
     await initializeSchema();
@@ -253,41 +253,37 @@ export async function main() {
       throw error;
     }
 
-    console.log(`Found ${dbSources?.length || 0} active sources`);
-
     if (!dbSources || dbSources.length === 0) {
       console.log("No active sources found");
       return [];
     }
 
-    const allCrawledItems: CrawlerItem[] = [];
-    for (const source of dbSources) {
+    console.log(`Found ${dbSources.length} active sources`);
+
+    // Process sources in batches
+    const results: CrawlerItem[] = [];
+    const sourcesToProcess = dbSources.slice(0, batchSize);
+    
+    console.log(`Processing batch of ${sourcesToProcess.length} sources`);
+    
+    for (const dbSource of sourcesToProcess) {
       try {
-        console.log(`Processing source: ${source.vendor} (${source.url})`);
-        if (source.type === 'rss') {
-          const items = await crawlRSSFeed(source);
-          allCrawledItems.push(...items);
-        }
+        console.log(`\nProcessing source: ${dbSource.vendor} (${dbSource.url})`);
+        const items = await crawlRSSFeed(dbSource);
+        results.push(...items);
       } catch (sourceError) {
-        console.error(`Error processing source ${source.vendor}:`, {
-          error: sourceError,
-          message: sourceError instanceof Error ? sourceError.message : 'Unknown error',
-          stack: sourceError instanceof Error ? sourceError.stack : undefined
-        });
+        console.error(`Error processing source ${dbSource.vendor}:`, sourceError);
+        // Continue with next source even if one fails
+        continue;
       }
     }
 
-    console.log("Crawler execution completed", {
-      totalSources: dbSources.length,
-      totalItems: allCrawledItems.length
-    });
-    return allCrawledItems;
+    console.log(`Completed processing ${sourcesToProcess.length} sources`);
+    console.log(`Found ${results.length} new items`);
+    
+    return results;
   } catch (error) {
-    console.error("Error in main crawler function:", {
-      error,
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    console.error("Error in main crawler function:", error);
     throw error;
   }
 }
@@ -342,7 +338,7 @@ function parseDate(dateStr: string): Date {
           const month = new Date(Date.parse(monthStr + " 1, 2000")).getMonth();
           return new Date(year, month, 1);
         }
-      } catch (e) {
+      } catch {
         console.warn(`Failed to manually parse date: ${cleanDateStr}`);
       }
     }
@@ -440,15 +436,6 @@ async function categorizeArticle(title: string, content: string): Promise<Catego
   }
   
   return categories;
-}
-
-// Update type annotations in the HTML processing
-function processHTML(html: string): string {
-  const $ = cheerio.load(html);
-  $('img').each((_: number, el: cheerio.Element) => {
-    $(el).remove();
-  });
-  return $.html();
 }
 
 // Only run crawler directly if this file is being run as a script

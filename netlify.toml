@@ -6,10 +6,10 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["src/server/**"]
-  external_node_modules = ["@supabase/supabase-js", "node-fetch"]
+  external_node_modules = ["@supabase/supabase-js", "openai"]
 
 [functions.crawler]
-  included_files = ["src/server/**"]
+  port = 3000
 
 [functions.scheduledCrawler]
   schedule = "0 */6 * * *"
@@ -25,7 +25,7 @@
 [dev]
   command = "npm run dev"
   framework = "#custom"
-  port = 5173
+  port = 3000
   targetPort = 5173
   publish = "dist" 
 
@@ -42,3 +42,8 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Content-Security-Policy = "default-src 'self' https://rqcowtehcygzmqgkvfiq.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*; font-src 'self' data: https://fonts.gstatic.com https://*; img-src 'self' data: https: http: blob:; connect-src 'self' https://rqcowtehcygzmqgkvfiq.supabase.co https://*.venturebeat.com https://*.wp.com https://fonts.googleapis.com https://fonts.gstatic.com https://*.techcrunch.com https://*.microsoft.com https://*.infor.com https://dam.infor.com https://*.oracle.com https://*; frame-src 'self' https://*;" 
+
+[[redirects]]
+  from = "netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200 
