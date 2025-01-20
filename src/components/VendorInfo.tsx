@@ -51,35 +51,35 @@ const newsSourceInfo: Record<NewsSource, VendorInfo> = {
     ]
   },
   Oracle: {
-    name: 'Oracle Corporation',
-    description: 'Provider of enterprise software and cloud computing solutions.',
+    name: 'Oracle',
+    description: 'Provider of enterprise software, cloud infrastructure, and integrated hardware/software systems.',
     website: 'https://www.oracle.com',
     products: [
-      { name: 'Oracle Cloud ERP', url: 'https://www.oracle.com/erp/' },
+      { name: 'Oracle ERP Cloud', url: 'https://www.oracle.com/erp/' },
       { name: 'Oracle NetSuite', url: 'https://www.netsuite.com/' },
       { name: 'Oracle JD Edwards', url: 'https://www.oracle.com/erp/jd-edwards/' }
     ],
     modules: [
-      'Financial Management', 'Procurement', 'Project Management', 'Risk Management', 'Supply Chain', 'Enterprise Performance'
+      'Finance', 'Procurement', 'Project Management', 'Risk Management', 'Supply Chain', 'EPM'
     ],
     customers: [
-      'AT&T', 'Bank of America', 'LinkedIn', 'Marriott', 'FedEx', 'Walmart'
+      'AT&T', 'Bank of America', 'LinkedIn', 'Marriott', 'Walmart', 'FedEx'
     ]
   },
   Microsoft: {
     name: 'Microsoft',
-    description: 'Leading provider of cloud computing services and enterprise software solutions.',
+    description: 'Leading provider of cloud-based business applications and productivity tools.',
     website: 'https://www.microsoft.com',
     products: [
-      { name: 'Dynamics 365 Finance', url: 'https://dynamics.microsoft.com/finance/' },
+      { name: 'Dynamics 365', url: 'https://dynamics.microsoft.com/' },
       { name: 'Dynamics 365 Business Central', url: 'https://dynamics.microsoft.com/business-central/' },
-      { name: 'Dynamics 365 Supply Chain', url: 'https://dynamics.microsoft.com/supply-chain-management/' }
+      { name: 'Power Platform', url: 'https://powerplatform.microsoft.com/' }
     ],
     modules: [
-      'Finance', 'Operations', 'Sales', 'Marketing', 'Customer Service', 'Field Service', 'Project Operations'
+      'Finance', 'Sales', 'Customer Service', 'Field Service', 'Supply Chain', 'Commerce'
     ],
     customers: [
-      'HP', 'Coca-Cola FEMSA', 'Pandora', 'Delta Air Lines', 'BMW Group', 'Chevron'
+      'HP', 'Coca-Cola', 'BMW', 'Chevron', 'Delta Air Lines', 'Walgreens'
     ]
   },
   Workday: {
@@ -130,6 +130,150 @@ const newsSourceInfo: Record<NewsSource, VendorInfo> = {
       'Ferrari', 'Triumph Motorcycles', 'BAE Systems', 'Heineken', 'Liberty Steel Group'
     ]
   },
+  Sage: {
+    name: 'Sage',
+    description: 'Provider of cloud business management solutions.',
+    website: 'https://www.sage.com',
+    products: [
+      { name: 'Sage Intacct', url: 'https://www.sage.com/en-us/products/sage-intacct/' },
+      { name: 'Sage X3', url: 'https://www.sage.com/en-us/products/sage-x3/' },
+      { name: 'Sage 300', url: 'https://www.sage.com/en-us/products/sage-300/' }
+    ],
+    modules: [
+      'Financial Management', 'HR', 'Payroll', 'Business Intelligence', 'CRM', 'Project Accounting'
+    ],
+    customers: [
+      'American Express', 'Subway', 'Liverpool FC', 'WWF', 'UNICEF'
+    ]
+  },
+  NetSuite: {
+    name: 'NetSuite',
+    description: 'Cloud-based business management suite.',
+    website: 'https://www.netsuite.com',
+    products: [
+      { name: 'NetSuite ERP', url: 'https://www.netsuite.com/portal/products/netsuite/erp.shtml' },
+      { name: 'SuiteCommerce', url: 'https://www.netsuite.com/portal/products/netsuite/ecommerce.shtml' },
+      { name: 'OpenAir', url: 'https://www.netsuite.com/portal/products/openair.shtml' }
+    ],
+    modules: [
+      'Financials', 'Inventory', 'Order Management', 'CRM', 'eCommerce', 'Professional Services'
+    ],
+    customers: [
+      'Groupon', 'Land O\'Lakes', 'Shaw Industries', 'Williams-Sonoma', 'Roku'
+    ]
+  },
+  Epicor: {
+    name: 'Epicor',
+    description: 'Industry-focused enterprise software solutions.',
+    website: 'https://www.epicor.com',
+    products: [
+      { name: 'Epicor ERP', url: 'https://www.epicor.com/en-us/erp-systems/epicor-erp/' },
+      { name: 'Prophet 21', url: 'https://www.epicor.com/en-us/erp-systems/prophet-21/' },
+      { name: 'BisTrack', url: 'https://www.epicor.com/en-us/erp-systems/bistrack/' }
+    ],
+    modules: [
+      'Manufacturing', 'Distribution', 'Retail', 'Service', 'Financial Management', 'Supply Chain'
+    ],
+    customers: [
+      'Domino\'s Pizza', 'Energizer', 'Mazda', 'Trek Bikes', 'Yamaha'
+    ]
+  },
+  IFS: {
+    name: 'IFS',
+    description: 'Global enterprise software provider.',
+    website: 'https://www.ifs.com',
+    products: [
+      { name: 'IFS Cloud', url: 'https://www.ifs.com/solutions/ifs-cloud/' },
+      { name: 'IFS Field Service', url: 'https://www.ifs.com/solutions/service-management/' },
+      { name: 'IFS Applications', url: 'https://www.ifs.com/solutions/enterprise-resource-planning/' }
+    ],
+    modules: [
+      'ERP', 'Field Service', 'Enterprise Asset Management', 'Project Management', 'Supply Chain'
+    ],
+    customers: [
+      'Volvo', 'Rolls-Royce', 'Jotun', 'Carlsberg', 'Panasonic'
+    ]
+  },
+  Odoo: {
+    name: 'Odoo',
+    description: 'Open source business applications suite.',
+    website: 'https://www.odoo.com',
+    products: [
+      { name: 'Odoo ERP', url: 'https://www.odoo.com/app/erp' },
+      { name: 'Odoo CRM', url: 'https://www.odoo.com/app/crm' },
+      { name: 'Odoo eCommerce', url: 'https://www.odoo.com/app/ecommerce' }
+    ],
+    modules: [
+      'Sales', 'CRM', 'Inventory', 'Manufacturing', 'Accounting', 'eCommerce', 'Website Builder'
+    ],
+    customers: [
+      'Toyota', 'Hyundai', 'Danone', 'WWF', 'Red Cross'
+    ]
+  },
+  Acumatica: {
+    name: 'Acumatica',
+    description: 'Cloud ERP software for small and mid-market businesses.',
+    website: 'https://www.acumatica.com',
+    products: [
+      { name: 'Acumatica Cloud ERP', url: 'https://www.acumatica.com/cloud-erp-software/' },
+      { name: 'Construction Edition', url: 'https://www.acumatica.com/cloud-erp-software/construction-management/' },
+      { name: 'Commerce Edition', url: 'https://www.acumatica.com/cloud-erp-software/commerce-management/' }
+    ],
+    modules: [
+      'Financial Management', 'Distribution', 'Manufacturing', 'Construction', 'Field Service', 'Commerce'
+    ],
+    customers: [
+      'Shoebacca', 'Superprem', 'ASi', 'Bertram Yachts', 'Specified Technologies'
+    ]
+  },
+  SYSPRO: {
+    name: 'SYSPRO',
+    description: 'ERP software for manufacturing and distribution.',
+    website: 'https://www.syspro.com',
+    products: [
+      { name: 'SYSPRO ERP', url: 'https://www.syspro.com/product/what-is-syspro/' },
+      { name: 'Manufacturing Operations', url: 'https://www.syspro.com/product/manufacturing-software/' },
+      { name: 'Distribution Management', url: 'https://www.syspro.com/product/distribution-software/' }
+    ],
+    modules: [
+      'Manufacturing', 'Distribution', 'Financial', 'Inventory', 'Planning', 'Quality'
+    ],
+    customers: [
+      'McCain Foods', 'Dunlop', 'Cascade', 'Amcor', 'Kohler'
+    ]
+  },
+  Deltek: {
+    name: 'Deltek',
+    description: 'Project-based software solutions.',
+    website: 'https://www.deltek.com',
+    products: [
+      { name: 'Deltek Vantagepoint', url: 'https://www.deltek.com/en/products/project-erp/vantagepoint' },
+      { name: 'Deltek Costpoint', url: 'https://www.deltek.com/en/products/project-erp/costpoint' },
+      { name: 'Deltek Vision', url: 'https://www.deltek.com/en/products/project-erp/vision' }
+    ],
+    modules: [
+      'Project Management', 'Resource Planning', 'Financial Management', 'Business Development', 'HR'
+    ],
+    customers: [
+      'Parsons', 'Jacobs', 'AECOM', 'Burns & McDonnell', 'HDR'
+    ]
+  },
+  QAD: {
+    name: 'QAD',
+    description: 'Cloud ERP for manufacturing companies.',
+    website: 'https://www.qad.com',
+    products: [
+      { name: 'QAD Adaptive ERP', url: 'https://www.qad.com/adaptive-erp' },
+      { name: 'QAD DynaSys DSCP', url: 'https://www.qad.com/solutions/supply-chain-planning' },
+      { name: 'QAD Precision', url: 'https://www.qad.com/solutions/global-trade-and-transportation' }
+    ],
+    modules: [
+      'Manufacturing', 'Supply Chain', 'Finance', 'Customer Management', 'Service & Support', 'Analytics'
+    ],
+    customers: [
+      'Zodiac Aerospace', 'Cascade Engineering', 'Solaft', 'Vitatech', 'BorgWarner'
+    ]
+  },
   // Tech News Sources
   TechCrunch: {
     name: 'TechCrunch',
@@ -144,6 +288,27 @@ const newsSourceInfo: Record<NewsSource, VendorInfo> = {
     website: 'https://venturebeat.com',
     topics: ['AI', 'Enterprise', 'Cloud', 'GamesBeat'],
     coverage: ['AI/ML News', 'Enterprise Tech', 'Cloud Computing', 'Gaming Industry']
+  },
+  ZDNet: {
+    name: 'ZDNet',
+    description: 'Business technology news website covering IT, computing, and enterprise tech.',
+    website: 'https://www.zdnet.com',
+    topics: ['Enterprise Tech', 'Security', 'Cloud', 'Innovation'],
+    coverage: ['Tech Reviews', 'Industry Analysis', 'Digital Transformation', 'Cybersecurity']
+  },
+  ComputerWeekly: {
+    name: 'Computer Weekly',
+    description: 'Leading provider of enterprise IT news and analysis.',
+    website: 'https://www.computerweekly.com',
+    topics: ['Enterprise IT', 'Digital Transformation', 'Security', 'Cloud'],
+    coverage: ['IT Strategy', 'Technology Implementation', 'Industry News', 'Case Studies']
+  },
+  InformationWeek: {
+    name: 'Information Week',
+    description: 'Enterprise technology publication focused on IT strategy and innovation.',
+    website: 'https://www.informationweek.com',
+    topics: ['Enterprise Tech', 'IT Strategy', 'DevOps', 'Security'],
+    coverage: ['IT Leadership', 'Digital Transformation', 'Infrastructure', 'Data Management']
   }
 };
 
@@ -153,6 +318,8 @@ export function VendorInfo({ vendor, compact = false }: VendorInfoProps) {
   if (vendor === 'All') return null;
 
   const info = newsSourceInfo[vendor];
+  if (!info) return null;  // Return null if vendor info is not found
+  
   const Icon = getVendorIcon(vendor);
   const vendorColor = getVendorColor(vendor);
 
