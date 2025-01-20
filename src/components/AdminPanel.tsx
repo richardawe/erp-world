@@ -186,6 +186,7 @@ export const AdminPanel: React.FC = () => {
       });
 
       let errorMessage = 'Failed to run crawler';
+      const responseClone = response.clone();
       
       try {
         const data = await response.json();
@@ -195,8 +196,8 @@ export const AdminPanel: React.FC = () => {
         }
         message.success({ content: `Crawler completed successfully. Found ${data.newItems} new items.`, key: 'crawling' });
       } catch (parseError) {
-        // If we can't parse the response as JSON, use the response text
-        const text = await response.text();
+        // If we can't parse the response as JSON, use the response text from the clone
+        const text = await responseClone.text();
         errorMessage = text || 'Failed to run crawler';
         throw new Error(errorMessage);
       }
