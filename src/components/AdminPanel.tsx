@@ -180,35 +180,56 @@ export const AdminPanel: React.FC = () => {
     });
 
     try {
+      console.log('Making request to crawler with:', { sourceId, manual: true });
+      
       const response = await fetch('/.netlify/functions/scheduledCrawler', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({ manual: true, sourceId })
+        body: JSON.stringify({ 
+          manual: true, 
+          sourceId: sourceId ? Number(sourceId) : undefined 
+        })
+      });
+
+      console.log('Received response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
-        const responseClone = response.clone();
+        let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to run crawler');
-        } catch {
-          const text = await responseClone.text();
-          throw new Error(text || 'Failed to run crawler');
+          console.error('Error response:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          const text = await response.text();
+          console.error('Raw error response:', text);
+          errorMessage = text || errorMessage;
         }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('Success response:', data);
+      
       message.success({
         content: sourceId ? `Successfully crawled source ${sourceId}` : 'Successfully ran crawler',
         key: 'crawling'
       });
+      
       await fetchSources(); // Refresh the sources list
     } catch (error) {
+      console.error('Crawler error:', error);
       message.error({
         content: `Failed to run crawler: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        key: 'crawling'
+        key: 'crawling',
+        duration: 5
       });
     } finally {
       setCrawling(false);

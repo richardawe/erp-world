@@ -258,7 +258,27 @@ async function crawlRSSFeed(source: Source): Promise<CrawlerItem[]> {
 // Update the main crawler function
 export async function main(batchSize = 3, sourceId?: number) {
   try {
-    console.log("Initializing crawler...");
+    console.log("Initializing crawler with params:", { batchSize, sourceId });
+    
+    // Validate environment variables
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+    
+    // Initialize schema and test connection
+    console.log("Testing database connection...");
+    try {
+      const { error: testError } = await supabase.from('sources').select('count', { count: 'exact', head: true });
+      if (testError) {
+        console.error('Database connection test failed:', testError);
+        throw testError;
+      }
+      console.log("Database connection successful");
+    } catch (connError) {
+      console.error('Failed to connect to database:', connError);
+      throw new Error('Database connection failed');
+    }
+    
     await initializeSchema();
     console.log("Schema initialized successfully");
     
@@ -275,24 +295,27 @@ export async function main(batchSize = 3, sourceId?: number) {
       console.log(`Fetching single source with ID: ${sourceId}`);
     }
 
-    const { data: dbSources, error } = await query;
+    const { data: dbSources, error: sourcesError } = await query;
 
-    if (error) {
+    if (sourcesError) {
       console.error("Error fetching sources:", {
-        error,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
+        error: sourcesError,
+        message: sourcesError.message,
+        details: sourcesError.details,
+        hint: sourcesError.hint
       });
-      throw error;
+      throw new Error(`Failed to fetch sources: ${sourcesError.message}`);
     }
 
     if (!dbSources || dbSources.length === 0) {
-      console.log(sourceId ? "Source not found or not active" : "No active sources found");
+      const message = sourceId ? `Source ${sourceId} not found or not active` : "No active sources found";
+      console.log(message);
       return [];
     }
 
-    console.log(`Found ${dbSources.length} active source(s)`);
+    console.log(`Found ${dbSources.length} active source(s):`, 
+      dbSources.map(s => ({ id: s.id, vendor: s.vendor, url: s.url }))
+    );
 
     // Process sources
     const results: CrawlerItem[] = [];
@@ -304,6 +327,7 @@ export async function main(batchSize = 3, sourceId?: number) {
       try {
         console.log(`\nProcessing source: ${dbSource.vendor} (${dbSource.url})`);
         const items = await crawlRSSFeed(dbSource);
+        console.log(`Successfully crawled ${items.length} items from ${dbSource.vendor}`);
         results.push(...items);
       } catch (sourceError) {
         console.error(`Error processing source ${dbSource.vendor}:`, sourceError);
@@ -317,7 +341,12 @@ export async function main(batchSize = 3, sourceId?: number) {
     
     return results;
   } catch (error) {
-    console.error("Error in main crawler function:", error);
+    console.error("Error in main crawler function:", {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error instanceof Error ? error.constructor.name : typeof error
+    });
     throw error;
   }
 }

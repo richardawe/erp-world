@@ -1,23 +1,29 @@
 import { HandlerEvent } from '@netlify/functions';
 import { main, updateOracleFeed } from '../../src/server/crawler';
 
+// Add CORS headers helper
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
+};
+
 // Remove all unused functions and constants, keep only the handler
 export default async function handler(event: HandlerEvent) {
   console.log('scheduledCrawler function invoked with event:', {
     httpMethod: event.httpMethod,
     body: event.body,
-    headers: event.headers
+    headers: event.headers,
+    path: event.path,
+    queryStringParameters: event.queryStringParameters
   });
 
   // Handle OPTIONS request for CORS
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ message: 'OK' }),
     };
   }
@@ -27,10 +33,7 @@ export default async function handler(event: HandlerEvent) {
     console.warn(`Rejected ${event.httpMethod} request`);
     return {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ 
         error: 'Method not allowed',
         message: `HTTP method ${event.httpMethod} is not supported.`
@@ -43,22 +46,32 @@ export default async function handler(event: HandlerEvent) {
     let body;
     try {
       body = event.body ? JSON.parse(event.body) : {};
+      console.log('Parsed request body:', body);
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: 'Invalid JSON',
-          message: 'Failed to parse request body'
+          message: 'Failed to parse request body',
+          details: parseError instanceof Error ? parseError.message : 'Unknown parse error'
         }),
       };
     }
 
-    console.log('Processing request with body:', body);
+    // Validate request body
+    if (!body || (typeof body !== 'object')) {
+      console.error('Invalid request body format:', body);
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'Invalid request',
+          message: 'Request body must be a valid JSON object'
+        }),
+      };
+    }
 
     // Handle Oracle feed update
     if (body.updateOracleFeed) {
@@ -68,17 +81,16 @@ export default async function handler(event: HandlerEvent) {
         console.log('Successfully updated Oracle feed');
         return {
           statusCode: 200,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
           body: JSON.stringify({ 
             message: 'Successfully updated Oracle feed'
           }),
         };
       } catch (oracleError) {
         console.error('Failed to update Oracle feed:', oracleError);
-        throw oracleError;
+        throw new Error(
+          `Failed to update Oracle feed: ${oracleError instanceof Error ? oracleError.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -90,11 +102,16 @@ export default async function handler(event: HandlerEvent) {
         console.log('Successfully completed scheduled crawl');
         return { 
           statusCode: 200,
-          body: JSON.stringify({ message: 'Successfully completed scheduled crawl' })
+          headers: corsHeaders,
+          body: JSON.stringify({ 
+            message: 'Successfully completed scheduled crawl' 
+          })
         };
       } catch (scheduledError) {
         console.error('Failed scheduled crawl:', scheduledError);
-        throw scheduledError;
+        throw new Error(
+          `Failed scheduled crawl: ${scheduledError instanceof Error ? scheduledError.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -110,10 +127,7 @@ export default async function handler(event: HandlerEvent) {
         
         return {
           statusCode: 200,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
+          headers: corsHeaders,
           body: JSON.stringify({ 
             message: sourceId ? 
               `Successfully crawled source ${sourceId}` : 
@@ -123,7 +137,9 @@ export default async function handler(event: HandlerEvent) {
         };
       } catch (manualError) {
         console.error('Failed manual crawl:', manualError);
-        throw manualError;
+        throw new Error(
+          `Failed manual crawl: ${manualError instanceof Error ? manualError.message : 'Unknown error'}`
+        );
       }
     }
 
@@ -131,13 +147,11 @@ export default async function handler(event: HandlerEvent) {
     console.warn('Invalid request received:', body);
     return {
       statusCode: 400,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ 
         error: 'Invalid request',
-        message: 'Request must be a scheduled event or manual trigger'
+        message: 'Request must be a scheduled event or manual trigger',
+        receivedBody: body
       }),
     };
 
@@ -151,10 +165,7 @@ export default async function handler(event: HandlerEvent) {
 
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ 
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
