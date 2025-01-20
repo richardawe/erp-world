@@ -1,7 +1,6 @@
-import { Handler, schedule } from "@netlify/functions";
+import { HandlerEvent, HandlerResponse, schedule } from "@netlify/functions";
 import { main as runCrawler } from "../../src/server/crawler";
 import OpenAI from 'openai';
-import type { Article } from '../../src/types';
 
 // LinkedIn API configuration
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
@@ -104,7 +103,13 @@ async function postToLinkedIn(summary: string, articleUrl: string) {
   }
 }
 
-const scheduledCrawlerHandler: Handler = async (event, context) => {
+interface CrawlerItem {
+  title: string;
+  content: string;
+  url: string;
+}
+
+const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
   try {
     console.log("Starting scheduled crawler...");
     
@@ -122,7 +127,8 @@ const scheduledCrawlerHandler: Handler = async (event, context) => {
     
     try {
       // Run crawler and get new items
-      const newItems = await runCrawler();
+      const crawlerResult = await runCrawler();
+      const newItems = crawlerResult as unknown as CrawlerItem[];
       console.log(`Found ${newItems?.length || 0} new items`);
 
       // Process each new item
@@ -172,15 +178,42 @@ const scheduledCrawlerHandler: Handler = async (event, context) => {
 };
 
 // Export the scheduled handler directly
-export const handler = schedule("0 */6 * * *", async (event, context) => {
+export const handler = schedule("0 */6 * * *", async (event: HandlerEvent): Promise<HandlerResponse> => {
+  // Set CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+
+  // Handle OPTIONS request (preflight)
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: ''
+    };
+  }
+
   // If it's a direct POST request or a scheduled event, run the crawler
-  if (event.httpMethod === 'POST' || event.type === 'scheduled') {
-    return scheduledCrawlerHandler(event, context);
+  if (event.httpMethod === 'POST' || event.body === '{"scheduled":true}') {
+    const response = await scheduledCrawlerHandler();
+    
+    // Add CORS headers to the response
+    return {
+      statusCode: response.statusCode,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: response.body
+    };
   }
 
   // For any other HTTP method, return method not allowed
   return {
     statusCode: 405,
+    headers: corsHeaders,
     body: JSON.stringify({ error: 'Method not allowed' })
   };
 }); 

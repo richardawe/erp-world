@@ -177,16 +177,26 @@ export const AdminPanel: React.FC = () => {
       message.loading({ content: 'Running crawler...', key: 'crawling', duration: 0 });
       
       const { error } = await supabase.functions.invoke('scheduledCrawler', {
-        body: { manual: true }
+        body: { manual: true },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Crawler error:', error);
+        throw error;
+      }
 
       message.success({ content: 'Crawler completed successfully', key: 'crawling' });
       fetchSources(); // Refresh the sources to update last_crawled timestamps
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error running crawler:', error);
-      message.error({ content: 'Failed to run crawler', key: 'crawling' });
+      message.error({ 
+        content: `Failed to run crawler: ${error.message || 'Unknown error'}`, 
+        key: 'crawling' 
+      });
     } finally {
       setCrawling(false);
     }
