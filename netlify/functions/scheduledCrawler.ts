@@ -1,4 +1,4 @@
-import { HandlerEvent, HandlerResponse, schedule } from "@netlify/functions";
+import { HandlerEvent, HandlerResponse } from "@netlify/functions";
 import { main as runCrawler } from "../../src/server/crawler";
 import OpenAI from 'openai';
 
@@ -177,8 +177,8 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
   }
 };
 
-// Export the scheduled handler directly
-export const handler = schedule("0 */6 * * *", async (event: HandlerEvent): Promise<HandlerResponse> => {
+// Export the handler function
+export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
   // Set CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -195,25 +195,16 @@ export const handler = schedule("0 */6 * * *", async (event: HandlerEvent): Prom
     };
   }
 
-  // If it's a direct POST request or a scheduled event, run the crawler
-  if (event.httpMethod === 'POST' || event.body === '{"scheduled":true}') {
-    const response = await scheduledCrawlerHandler();
-    
-    // Add CORS headers to the response
-    return {
-      statusCode: response.statusCode,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      },
-      body: response.body
-    };
-  }
-
-  // For any other HTTP method, return method not allowed
+  // Run the crawler for both scheduled events and manual triggers
+  const response = await scheduledCrawlerHandler();
+  
+  // Add CORS headers to the response
   return {
-    statusCode: 405,
-    headers: corsHeaders,
-    body: JSON.stringify({ error: 'Method not allowed' })
+    statusCode: response.statusCode,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    },
+    body: response.body
   };
-}); 
+}; 
