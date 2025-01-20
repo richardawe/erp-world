@@ -230,18 +230,26 @@ async function crawlRSSFeed(source: Source): Promise<CrawlerItem[]> {
 }
 
 // Update the main crawler function
-export async function main(batchSize = 3) {
+export async function main(batchSize = 3, sourceId?: number) {
   try {
     console.log("Initializing crawler...");
     await initializeSchema();
     console.log("Schema initialized successfully");
     
     // Fetch active sources from the database
-    console.log("Fetching active sources...");
-    const { data: dbSources, error } = await supabase
+    console.log("Fetching sources...");
+    let query = supabase
       .from('sources')
       .select('*')
       .eq('active', true);
+    
+    // If sourceId is provided, only fetch that source
+    if (sourceId) {
+      query = query.eq('id', sourceId);
+      console.log(`Fetching single source with ID: ${sourceId}`);
+    }
+
+    const { data: dbSources, error } = await query;
 
     if (error) {
       console.error("Error fetching sources:", {
@@ -254,17 +262,17 @@ export async function main(batchSize = 3) {
     }
 
     if (!dbSources || dbSources.length === 0) {
-      console.log("No active sources found");
+      console.log(sourceId ? "Source not found or not active" : "No active sources found");
       return [];
     }
 
-    console.log(`Found ${dbSources.length} active sources`);
+    console.log(`Found ${dbSources.length} active source(s)`);
 
-    // Process sources in batches
+    // Process sources
     const results: CrawlerItem[] = [];
-    const sourcesToProcess = dbSources.slice(0, batchSize);
+    const sourcesToProcess = sourceId ? dbSources : dbSources.slice(0, batchSize);
     
-    console.log(`Processing batch of ${sourcesToProcess.length} sources`);
+    console.log(`Processing ${sourcesToProcess.length} source(s)`);
     
     for (const dbSource of sourcesToProcess) {
       try {
@@ -278,7 +286,7 @@ export async function main(batchSize = 3) {
       }
     }
 
-    console.log(`Completed processing ${sourcesToProcess.length} sources`);
+    console.log(`Completed processing ${sourcesToProcess.length} source(s)`);
     console.log(`Found ${results.length} new items`);
     
     return results;
@@ -436,6 +444,25 @@ async function categorizeArticle(title: string, content: string): Promise<Catego
   }
   
   return categories;
+}
+
+// Update Oracle feed URL in the database
+export async function updateOracleFeed() {
+  try {
+    const { error } = await supabase
+      .from('sources')
+      .update({ 
+        url: 'https://www.oracle.com/uk/news/rss.html',
+        type: 'rss'
+      })
+      .eq('vendor', 'Oracle');
+
+    if (error) throw error;
+    console.log('Successfully updated Oracle feed URL');
+  } catch (error) {
+    console.error('Error updating Oracle feed:', error);
+    throw error;
+  }
 }
 
 // Only run crawler directly if this file is being run as a script

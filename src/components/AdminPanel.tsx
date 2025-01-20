@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Button, Select, message, Table, Space, Tag, Modal } from 'antd';
-import { PlusOutlined, DeleteOutlined, LogoutOutlined, ExclamationCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Select, message, Table, Space, Tag, Modal, Switch } from 'antd';
+import { PlusOutlined, DeleteOutlined, LogoutOutlined, ExclamationCircleOutlined, SyncOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginForm } from './LoginForm';
@@ -171,84 +171,84 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleRunCrawler = async () => {
+  const handleRunCrawler = async (sourceId?: number) => {
     setCrawling(true);
+    message.loading({
+      content: sourceId ? `Running crawler for source ${sourceId}...` : 'Running crawler for all sources...',
+      key: 'crawling',
+      duration: 0
+    });
+
     try {
-      message.loading({ content: 'Running crawler...', key: 'crawling', duration: 0 });
-      
       const response = await fetch('/.netlify/functions/scheduledCrawler', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ manual: true }),
+        body: JSON.stringify({ manual: true, sourceId })
       });
 
-      // Get the response text first
-      const responseText = await response.text();
-      
-      // Check if response is empty
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-
-      // Try to parse as JSON
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse response:', responseText);
-        throw new Error(`Invalid response format: ${responseText}`);
-      }
-      
       if (!response.ok) {
-        const errorMessage = data.message || data.error || 'Failed to run crawler';
-        console.error('Crawler error details:', data);
-        throw new Error(errorMessage);
+        const responseClone = response.clone();
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to run crawler');
+        } catch {
+          const text = await responseClone.text();
+          throw new Error(text || 'Failed to run crawler');
+        }
       }
 
-      message.success({ 
-        content: `Crawler completed successfully. Found ${data.newItems} new items.`, 
-        key: 'crawling' 
+      const data = await response.json();
+      message.success({
+        content: sourceId ? `Successfully crawled source ${sourceId}` : 'Successfully ran crawler',
+        key: 'crawling'
       });
-      fetchSources(); // Refresh the sources to update last_crawled timestamps
-    } catch (error: any) {
-      console.error('Error running crawler:', error);
-      // Show error in a modal for better visibility
-      Modal.error({
-        title: 'Crawler Error',
-        content: (
-          <div>
-            <p>{error.message || 'Unknown error'}</p>
-            {error.details && (
-              <div className="mt-4">
-                <p className="font-bold">Error Details:</p>
-                <pre className="mt-2 p-4 bg-gray-100 rounded overflow-auto max-h-96">
-                  {error.details}
-                </pre>
-              </div>
-            )}
-          </div>
-        ),
-        width: 800,
-      });
-      message.error({ 
-        content: 'Failed to run crawler. Click for details.', 
-        key: 'crawling',
-        onClick: () => {
-          Modal.error({
-            title: 'Crawler Error Details',
-            content: (
-              <pre className="overflow-auto max-h-96">
-                {JSON.stringify(error, null, 2)}
-              </pre>
-            ),
-            width: 800,
-          });
-        }
+      await fetchSources(); // Refresh the sources list
+    } catch (error) {
+      message.error({
+        content: `Failed to run crawler: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        key: 'crawling'
       });
     } finally {
       setCrawling(false);
+    }
+  };
+
+  const handleUpdateOracleFeed = async () => {
+    try {
+      message.loading({ content: 'Updating Oracle feed...', key: 'oracle' });
+      const response = await fetch('/.netlify/functions/scheduledCrawler', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updateOracleFeed: true })
+      });
+
+      if (!response.ok) {
+        const responseClone = response.clone();
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update Oracle feed');
+        } catch {
+          const text = await responseClone.text();
+          throw new Error(text || 'Failed to update Oracle feed');
+        }
+      }
+
+      message.success({ content: 'Successfully updated Oracle feed', key: 'oracle' });
+      await fetchSources(); // Refresh the sources list
+      // Run crawler for Oracle source
+      const oracleSource = sources.find(s => s.vendor === 'Oracle');
+      if (oracleSource) {
+        await handleRunCrawler(oracleSource.id);
+      }
+    } catch (error) {
+      message.error({
+        content: `Failed to update Oracle feed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        key: 'oracle'
+      });
     }
   };
 
@@ -313,19 +313,29 @@ export const AdminPanel: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: (text: string, record: Source) => (
+      render: (_, record) => (
         <Space>
           <Button
-            type={record.active ? 'default' : 'primary'}
-            onClick={() => handleToggleActive(record)}
-            className={record.active ? 'hover:text-red-500' : 'hover:text-green-500'}
+            size="small"
+            onClick={() => handleRunCrawler(record.id)}
+            loading={crawling}
+            icon={<ThunderboltOutlined />}
           >
-            {record.active ? 'Deactivate' : 'Activate'}
+            Crawl
           </Button>
           <Button
+            size="small"
+            type="primary"
             danger
-            icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
+            icon={<DeleteOutlined />}
+          >
+            Delete
+          </Button>
+          <Switch
+            size="small"
+            checked={record.active}
+            onChange={(checked) => handleToggleActive(record)}
           />
         </Space>
       ),
@@ -339,17 +349,21 @@ export const AdminPanel: React.FC = () => {
         <Space>
           <Button
             type="primary"
-            icon={<SyncOutlined spin={crawling} />}
-            onClick={handleRunCrawler}
+            onClick={() => handleRunCrawler()}
             loading={crawling}
-            className="mr-2"
+            icon={<ThunderboltOutlined />}
           >
             Run Crawler
           </Button>
-          <Button 
-            icon={<LogoutOutlined />} 
+          <Button
+            onClick={handleUpdateOracleFeed}
+            icon={<SyncOutlined />}
+          >
+            Update Oracle Feed
+          </Button>
+          <Button
             onClick={handleSignOut}
-            danger
+            icon={<LogoutOutlined />}
           >
             Sign Out
           </Button>
