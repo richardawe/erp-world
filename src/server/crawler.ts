@@ -236,56 +236,73 @@ async function crawlRSSFeed(source: Source): Promise<void> {
 // Update the main crawler function
 export async function main() {
   try {
+    console.log("Initializing crawler...");
     await initializeSchema();
+    console.log("Schema initialized successfully");
     
     // Fetch active sources from the database
+    console.log("Fetching active sources...");
     const { data: dbSources, error } = await supabase
       .from('sources')
       .select('*')
       .eq('active', true);
 
     if (error) {
+      console.error("Error fetching sources:", {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
 
-    console.log(`Found ${dbSources?.length || 0} active sources to crawl`);
-    
-    // Process each source
-    for (const dbSource of dbSources || []) {
-      try {
-        // Convert database source to crawler source
-        const source: Source = {
-          ...dbSource,
-          // Add any additional selectors based on the vendor
-          ...(dbSource.vendor === 'Infor' ? {
-            articleSelector: '.news-item',
-            titleSelector: '.news-item__title',
-            summarySelector: '.news-item__description',
-            dateSelector: '.news-item__date'
-          } : {})
-        };
+    console.log(`Found ${dbSources?.length || 0} active sources`);
 
+    if (!dbSources || dbSources.length === 0) {
+      console.log("No active sources found");
+      return [];
+    }
+
+    const results = [];
+    for (const source of dbSources) {
+      try {
+        console.log(`Processing source: ${source.vendor} (${source.url})`);
         if (source.type === 'rss') {
           await crawlRSSFeed(source);
-        } else if (source.type === 'html') {
-          // Add HTML crawling implementation here
-          console.log(`HTML crawling not implemented for ${source.vendor}`);
         }
-
-        // Update last_crawled timestamp
-        await supabase
-          .from('sources')
-          .update({ last_crawled: new Date().toISOString() })
-          .eq('id', source.id);
-
+        // Add result to track processed sources
+        results.push({
+          source: source.vendor,
+          url: source.url,
+          status: 'success'
+        });
       } catch (sourceError) {
-        console.error(`Error processing source ${dbSource.vendor}:`, sourceError);
+        console.error(`Error processing source ${source.vendor}:`, {
+          error: sourceError,
+          message: sourceError instanceof Error ? sourceError.message : 'Unknown error',
+          stack: sourceError instanceof Error ? sourceError.stack : undefined
+        });
+        results.push({
+          source: source.vendor,
+          url: source.url,
+          status: 'error',
+          error: sourceError instanceof Error ? sourceError.message : 'Unknown error'
+        });
       }
     }
 
-    return dbSources || [];
+    console.log("Crawler execution completed", {
+      totalSources: dbSources.length,
+      results
+    });
+    return results;
   } catch (error) {
-    console.error('Error in main crawler function:', error);
+    console.error("Error in main crawler function:", {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 }

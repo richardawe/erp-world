@@ -114,20 +114,37 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
     console.log("Starting scheduled crawler...");
     
     // Validate environment variables before running
-    validateEnv();
+    try {
+      validateEnv();
+    } catch (envError) {
+      console.error("Environment validation failed:", envError);
+      throw envError;
+    }
     
     // Log configuration (without sensitive values)
     console.log("Scheduled Crawler configuration:", {
       supabaseUrl: process.env.VITE_SUPABASE_URL,
       hasServiceKey: !!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
       hasLinkedInToken: !!LINKEDIN_ACCESS_TOKEN,
+      hasOpenRouterKey: !!OPENROUTER_API_KEY,
       nodeEnv: process.env.NODE_ENV,
       timestamp: new Date().toISOString()
     });
     
     try {
       // Run crawler and get new items
+      console.log("Starting crawler execution...");
       const crawlerResult = await runCrawler();
+      console.log("Crawler execution completed:", {
+        resultType: typeof crawlerResult,
+        isArray: Array.isArray(crawlerResult),
+        length: Array.isArray(crawlerResult) ? crawlerResult.length : 'not an array'
+      });
+
+      if (!crawlerResult) {
+        throw new Error('Crawler returned no result');
+      }
+
       const newItems = crawlerResult as unknown as CrawlerItem[];
       console.log(`Found ${newItems?.length || 0} new items`);
 
@@ -167,11 +184,19 @@ const scheduledCrawlerHandler = async (): Promise<HandlerResponse> => {
         })
       };
     } catch (crawlerError) {
-      console.error("Error during crawler execution:", crawlerError);
+      console.error("Error during crawler execution:", {
+        error: crawlerError,
+        message: crawlerError instanceof Error ? crawlerError.message : 'Unknown error',
+        stack: crawlerError instanceof Error ? crawlerError.stack : undefined
+      });
       throw new Error(`Crawler execution failed: ${crawlerError instanceof Error ? crawlerError.message : 'Unknown error'}`);
     }
   } catch (error) {
-    console.error("Error running scheduled crawler:", error);
+    console.error("Error running scheduled crawler:", {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return {
       statusCode: 500,
       headers: {
