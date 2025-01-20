@@ -1,6 +1,28 @@
-export type ERPVendor = 'SAP' | 'Oracle' | 'Microsoft' | 'Workday' | 'Unit4' | 'Infor';
+export type ERPVendor = 
+  | 'SAP' 
+  | 'Oracle' 
+  | 'Microsoft' 
+  | 'Workday' 
+  | 'Unit4' 
+  | 'Infor'
+  | 'Sage'
+  | 'NetSuite'
+  | 'Epicor'
+  | 'IFS'
+  | 'Odoo'
+  | 'Acumatica'
+  | 'SYSPRO'
+  | 'Deltek'
+  | 'QAD';
 
-export type NewsSource = ERPVendor | 'TechCrunch' | 'VentureBeat';
+export type TechNewsSource = 
+  | 'TechCrunch' 
+  | 'VentureBeat'
+  | 'ZDNet'
+  | 'ComputerWeekly'
+  | 'InformationWeek';
+
+export type NewsSource = ERPVendor | TechNewsSource;
 
 export type Category = 'Product Launch' | 'Security Update' | 'Market Trend' | 'Partnership' | 'Acquisition' | 'AI Innovation' | 'General';
 
