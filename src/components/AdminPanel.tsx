@@ -185,13 +185,22 @@ export const AdminPanel: React.FC = () => {
         body: JSON.stringify({ manual: true })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to run crawler');
+      let errorMessage = 'Failed to run crawler';
+      
+      try {
+        const data = await response.json();
+        if (!response.ok) {
+          errorMessage = data.message || data.error || 'Failed to run crawler';
+          throw new Error(errorMessage);
+        }
+        message.success({ content: `Crawler completed successfully. Found ${data.newItems} new items.`, key: 'crawling' });
+      } catch (parseError) {
+        // If we can't parse the response as JSON, use the response text
+        const text = await response.text();
+        errorMessage = text || 'Failed to run crawler';
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      message.success({ content: `Crawler completed successfully. Found ${data.newItems} new items.`, key: 'crawling' });
       fetchSources(); // Refresh the sources to update last_crawled timestamps
     } catch (error: any) {
       console.error('Error running crawler:', error);
