@@ -176,20 +176,22 @@ export const AdminPanel: React.FC = () => {
       setCrawling(true);
       message.loading({ content: 'Running crawler...', key: 'crawling', duration: 0 });
       
-      const { error } = await supabase.functions.invoke('scheduledCrawler', {
-        body: { manual: true },
+      const response = await fetch('/.netlify/functions/scheduledCrawler', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
-        }
+        },
+        body: JSON.stringify({ manual: true })
       });
 
-      if (error) {
-        console.error('Crawler error:', error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to run crawler');
       }
 
-      message.success({ content: 'Crawler completed successfully', key: 'crawling' });
+      const data = await response.json();
+      message.success({ content: `Crawler completed successfully. Found ${data.newItems} new items.`, key: 'crawling' });
       fetchSources(); // Refresh the sources to update last_crawled timestamps
     } catch (error: any) {
       console.error('Error running crawler:', error);
