@@ -193,7 +193,7 @@ export const AdminPanel: React.FC = () => {
         },
         body: JSON.stringify({ 
           manual: true, 
-          sourceId: sourceId ? Number(sourceId) : undefined 
+          sourceId: sourceId 
         })
       });
 
@@ -204,6 +204,8 @@ export const AdminPanel: React.FC = () => {
       });
 
       const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+      
       let data;
       try {
         data = JSON.parse(responseText);
@@ -220,9 +222,18 @@ export const AdminPanel: React.FC = () => {
       console.log('Success response:', data);
       
       message.success({
-        content: sourceId ? `Successfully crawled source ${sourceId}` : 'Successfully ran crawler',
+        content: data.message || (sourceId ? `Successfully crawled source ${sourceId}` : 'Successfully ran crawler'),
         key: 'crawling'
       });
+
+      if (data.errors?.length > 0) {
+        data.errors.forEach((error: { source: string; error: string }) => {
+          message.warning({
+            content: `Error crawling ${error.source}: ${error.error}`,
+            duration: 5
+          });
+        });
+      }
       
       await fetchSources(); // Refresh the sources list
     } catch (error) {
